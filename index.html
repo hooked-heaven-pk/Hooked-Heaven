@@ -38,7 +38,8 @@
   .nav .in{max-width:1140px;margin:0 auto;padding:14px 32px;display:flex;align-items:center;justify-content:space-between;gap:16px}
   @media(max-width:640px){.nav .in{padding:12px 20px}}
   .mark{display:flex;align-items:center;gap:11px;background:none;border:none;padding:0}
-  .mark img{width:38px;height:38px;border-radius:50%;object-fit:cover}
+  .mark-logo{width:38px;height:38px;border-radius:50%;overflow:hidden;flex:0 0 38px;background:var(--mist)}
+  .mark-logo img{width:100%;height:100%;object-fit:cover}
   .mark span{font-family:"Cormorant Garamond",Georgia,serif;font-size:21px;letter-spacing:.03em;font-weight:400}
   .mark em{font-style:italic;color:var(--forest)}
   .bag{background:none;border:none;padding:6px 0;font-size:12px;letter-spacing:.13em;text-transform:uppercase;
@@ -64,6 +65,8 @@
   .hero-arch{aspect-ratio:4/5;max-width:430px;margin:0 auto;width:100%}
   .hero-arch::after{content:"";position:absolute;inset:0;border-radius:inherit;
     border:1px solid rgba(53,48,42,.08);pointer-events:none}
+  .hero-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft-ink)}
 
   /* ---------- shelf ---------- */
   .shelf{padding:20px 0 10px}
@@ -176,7 +179,7 @@
 <nav class="nav">
   <div class="in">
     <button class="mark" onclick="window.scrollTo({top:0,behavior:'smooth'})">
-      <img src="images/logo.png" alt="Hooked Heaven">
+      <span class="mark-logo" id="nav-logo"></span>
       <span>Hooked <em>Heaven</em></span>
     </button>
     <button class="bag" onclick="openBag()">Bag <span class="n" id="bag-n">(0)</span></button>
@@ -191,7 +194,8 @@
     <a class="link" href="#shop">See the pieces</a>
   </div>
   <div class="arch hero-arch">
-    <img id="hero-img" src="images/sunflower-charm.jpg" alt="Handmade crochet">
+    <img id="hero-img" src="" alt="Handmade crochet" style="display:none">
+    <div id="hero-empty" class="hero-empty">Photos coming soon</div>
   </div>
 </header>
 
@@ -216,7 +220,7 @@
 <footer>
   <div class="wrap">
     <div class="mark">
-      <img src="images/logo.png" alt="">
+      <span class="mark-logo" id="foot-logo"></span>
       <span>Hooked <em>Heaven</em></span>
     </div>
     <div class="fine">
@@ -289,8 +293,26 @@ async function loadAll(){
   const ig = (SETTINGS.instagram_handle || "").replace("@","");
   document.getElementById("ig-link").href = ig ? `https://instagram.com/${ig}` : "#";
 
+  // Logo: shown in nav + footer once uploaded via the dashboard
+  if(SETTINGS.logo_path){
+    const logoUrl = imgUrl(SETTINGS.logo_path);
+    document.getElementById("nav-logo").innerHTML = `<img src="${logoUrl}" alt="Hooked Heaven">`;
+    document.getElementById("foot-logo").innerHTML = `<img src="${logoUrl}" alt="">`;
+  }
+
+  // Hero photo: first in-stock product photo, falling back to the logo, falling back to an empty state
   const firstWithPhoto = PRODUCTS.find(p => p.image_path);
-  if(firstWithPhoto) document.getElementById("hero-img").src = imgUrl(firstWithPhoto.image_path);
+  const heroImg = document.getElementById("hero-img");
+  const heroEmpty = document.getElementById("hero-empty");
+  const heroSrc = firstWithPhoto ? imgUrl(firstWithPhoto.image_path) : (SETTINGS.logo_path ? imgUrl(SETTINGS.logo_path) : "");
+  if(heroSrc){
+    heroImg.src = heroSrc;
+    heroImg.style.display = "";
+    heroEmpty.style.display = "none";
+  }else{
+    heroImg.style.display = "none";
+    heroEmpty.style.display = "flex";
+  }
 
   renderGrid();
 }
