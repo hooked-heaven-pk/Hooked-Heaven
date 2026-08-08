@@ -433,6 +433,14 @@ const SFIELDS=[
 function vSettings(){
   document.getElementById("main").innerHTML = `
     <div class="head"><h1>Settings</h1></div>
+    <div class="card">
+      <h2 style="margin-bottom:6px">Logo</h2>
+      <p style="color:var(--soft-ink);font-size:12.5px;margin-bottom:14px">Shown in the header and footer of your site.</p>
+      ${SET.logo_path ? `<img class="prev" src="${imgUrl(SET.logo_path)}">` : ""}
+      <div class="fld"><label>Upload logo</label><input type="file" id="s-logo" accept="image/*"></div>
+      <button class="btn forest sm" onclick="saveLogo()">Save logo</button>
+      <span id="logo-msg" style="display:none;font-size:13px;margin-left:10px"></span>
+    </div>
     <div class="card"><div class="grid1">
       ${SFIELDS.map(([k,l])=>`<div class="fld"><label>${l}</label><input id="s-${k}" value="${esc(SET[k]||"")}"></div>`).join("")}
       <div><button class="btn forest" onclick="svSettings()">Save settings</button>
@@ -459,6 +467,26 @@ function vSettings(){
       </div>
     </div>`;
 }
+async function saveLogo(){
+  const file=document.getElementById("s-logo").files[0];
+  const msg=document.getElementById("logo-msg");
+  msg.style.display="none";
+  if(!file){ msg.textContent="Choose a file first"; msg.style.color="var(--bad)"; msg.style.display="inline"; return; }
+  try{
+    const ext=file.name.split(".").pop();
+    const path=`logo-${crypto.randomUUID()}.${ext}`;
+    const up=await sb.storage.from("product-images").upload(path,file);
+    if(up.error) throw up.error;
+    const r=await sb.from("shop_settings").upsert({key:"logo_path", value:path});
+    if(r.error) throw r.error;
+    await ldSet();
+    vSettings();
+  }catch(e){
+    console.error(e);
+    msg.textContent="Could not save logo"; msg.style.color="var(--bad)"; msg.style.display="inline";
+  }
+}
+
 async function svSettings(){
   const msg=document.getElementById("s-msg");
   try{
