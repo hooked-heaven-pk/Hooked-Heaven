@@ -94,6 +94,17 @@
   .rule{width:76px;height:1px;background:var(--gold);margin:22px auto 0;position:relative}
   .rule::after{content:"";position:absolute;left:50%;top:-3px;width:7px;height:7px;
     margin-left:-3.5px;background:var(--gold);border-radius:50%}
+  /* ---------- search ---------- */
+  .search-wrap{max-width:420px;margin:0 auto 40px;position:relative}
+  .search-wrap input{width:100%;border:1px solid var(--hair);background:var(--paper);border-radius:999px;
+    padding:12px 42px 12px 20px;font-family:inherit;font-size:14px;font-weight:300;color:var(--ink)}
+  .search-wrap input:focus{outline:none;border-color:var(--forest)}
+  .search-wrap svg{position:absolute;right:16px;top:50%;transform:translateY(-50%);width:16px;height:16px;
+    color:var(--soft-ink);pointer-events:none}
+  .search-clear{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;
+    color:var(--soft-ink);font-size:16px;line-height:1;padding:4px;display:none}
+  .search-wrap.has-value .search-clear{display:block}
+  .search-wrap.has-value svg{display:none}
   /* minmax(0,1fr): a long unbroken word must not stretch the column */
   .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:38px 22px}
   @media(min-width:820px){.grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:64px 40px}}
@@ -212,6 +223,7 @@
   .fld input:focus,.fld textarea:focus,.fld select:focus{outline:none;border-bottom-color:var(--forest)}
   .pay-note{border-left:1px solid var(--gold);padding:4px 0 4px 16px;margin:22px 0;
     font-size:13px;color:var(--soft-ink);overflow-wrap:anywhere}
+  .hint{font-size:11px;color:var(--soft-ink);margin:0 0 15px;line-height:1.5}
   .err{color:#A8452F;font-size:12.5px;margin-top:12px;overflow-wrap:anywhere}
   .err .why{display:block;font-size:11px;opacity:.75;margin-top:4px;line-height:1.5}
   .note{color:var(--walnut);background:var(--gold-wash);border-radius:10px;
@@ -258,6 +270,11 @@
     <div class="label">The collection</div>
     <h2>Every piece, made to order</h2>
     <div class="rule"></div>
+  </div>
+  <div class="search-wrap" id="search-wrap">
+    <input id="search-input" type="search" placeholder="Search products…" oninput="onSearch()" autocomplete="off">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <button class="search-clear" onclick="clearSearch()" aria-label="Clear search">&times;</button>
   </div>
   <div class="grid" id="grid"><div class="state">Loading…</div></div>
 </section>
@@ -432,12 +449,37 @@ async function loadAll(){
   renderGrid();
 }
 /* ---------- shelf ---------- */
+let searchQuery = "";
+function onSearch(){
+  searchQuery = document.getElementById("search-input").value;
+  document.getElementById("search-wrap").classList.toggle("has-value", searchQuery.length > 0);
+  renderGrid();
+}
+function clearSearch(){
+  searchQuery = "";
+  const input = document.getElementById("search-input");
+  if(input) input.value = "";
+  document.getElementById("search-wrap").classList.remove("has-value");
+  renderGrid();
+}
+function matchesSearch(p, q){
+  if(!q) return true;
+  const hay = (p.name + " " + (p.description||"") + " " + (p.colors||"")).toLowerCase();
+  return hay.includes(q.toLowerCase().trim());
+}
 function renderGrid(){
   if(PRODUCTS.length === 0){
     document.getElementById("grid").innerHTML = '<div class="state">New pieces are on the hook — check back soon.</div>';
     return;
   }
-  document.getElementById("grid").innerHTML = PRODUCTS.map(p => `
+  const q = searchQuery.trim();
+  const list = PRODUCTS.filter(p => matchesSearch(p, q));
+  if(list.length === 0){
+    document.getElementById("grid").innerHTML =
+      `<div class="state">No products match "${esc(q)}" — try a different search.</div>`;
+    return;
+  }
+  document.getElementById("grid").innerHTML = list.map(p => `
     <button class="card" onclick="openProduct('${p.id}')">
       ${archOf(p)}
       <span class="name">${esc(p.name)}</span>
@@ -605,8 +647,9 @@ function drawCheckout(){
     <div class="fld"><label>City / town</label><input id="k-city" placeholder="e.g. Lahore"></div>
     <div class="fld"><label>Address</label><textarea id="k-addr" placeholder="House, street, area, landmark"></textarea></div>
     <div class="pay-note" id="pay-note">Loading payment details…</div>
-    <div class="fld"><label>Payment receipt (optional now, can send on Instagram)</label>
+    <div class="fld"><label>Payment receipt (required)</label>
       <input id="k-receipt" type="file" accept="image/*,application/pdf"></div>
+    <div class="hint" style="margin-top:-10px">Upload a screenshot of your payment before placing the order.</div>
     <div style="border-top:1px solid var(--hair);padding-top:18px;margin-top:6px">
       <div class="srow"><span>Subtotal</span><span>${money(subtotal())}</span></div>
       <div class="srow"><span>Delivery</span><span id="k-ship">—</span></div>
@@ -636,7 +679,9 @@ function totals(){
   document.getElementById("k-ship").textContent = z ? money(fee) : "—";
   document.getElementById("k-total").textContent = money(subtotal() + fee);
 }
+let pendingOrderNumber = null;
 async function submitOrder(){
+  if(pendingOrderNumber){ return retryReceipt(); }
   const name = document.getElementById("k-name").value.trim();
   const phone = document.getElementById("k-phone").value.trim();
   const city = document.getElementById("k-city").value.trim();
@@ -655,9 +700,25 @@ async function submitOrder(){
     err.style.display = "block";
     return;
   }
+  if(!file){
+    err.textContent = "Please upload your payment receipt to place the order.";
+    err.style.display = "block";
+    return;
+  }
+  if(!file.size){
+    err.textContent = "That file looks empty — please choose your receipt photo again.";
+    err.style.display = "block";
+    return;
+  }
+  if(!/^image\//.test(file.type||"") && file.type !== "application/pdf"){
+    err.textContent = "Please upload the receipt as a photo or a PDF.";
+    err.style.display = "block";
+    return;
+  }
   go.disabled = true; go.textContent = "Placing order…";
+  let orderNumber;
   try{
-    const { data: orderNumber, error } = await sb.rpc("place_order", {
+    const res = await sb.rpc("place_order", {
       p_customer_name: name,
       p_customer_phone: phone,
       p_customer_address: address,
@@ -665,29 +726,39 @@ async function submitOrder(){
       p_zone_id: zone.id,
       p_items: BAG.map(i => ({ product_id: i.product_id, quantity: i.quantity, selected_color: i.selected_color || null }))
     });
-    if(error) throw error;
+    if(res.error) throw res.error;
+    orderNumber = res.data;
     if(!orderNumber) throw new Error("the server did not return an order number");
-    // Order is already saved. The receipt is a best-effort extra — if it fails
-    // we must TELL the customer, otherwise the shop owner has no proof of payment.
-    let receiptOk = null;
-    if(file){
-      receiptOk = false;
-      go.textContent = "Uploading receipt…";
-      try{
-        const blob = await shrinkImage(file);
-        const ext = (blob.type === "image/jpeg") ? "jpg"
-                  : (((file.name||"").split(".").pop() || "jpg").toLowerCase());
-        const path = `${orderNumber}/${Date.now()}.${ext}`;
-        const up = await sb.storage.from("payment-receipts")
-          .upload(path, blob, { contentType: blob.type || "image/jpeg" });
-        if(up.error) throw up.error;
-        const at = await sb.rpc("attach_receipt", { p_order_number: orderNumber, p_receipt_path: up.data.path });
-        if(at.error) throw at.error;
-        receiptOk = true;
-      }catch(e){ console.error("Receipt upload failed", e); }
+    // The order row already exists at this point — creating it first means a
+    // storage hiccup can never make it look like "payment sent, no order on file".
+    // The receipt is required, so if the upload fails we don't clear the bag or
+    // show success: we keep the order number on screen and let the customer retry
+    // the upload for that same order.
+    go.textContent = "Uploading receipt…";
+    try{
+      const blob = await shrinkImage(file);
+      const ext = (blob.type === "image/jpeg") ? "jpg"
+                : (((file.name||"").split(".").pop() || "jpg").toLowerCase());
+      const path = `${orderNumber}/${Date.now()}.${ext}`;
+      const up = await sb.storage.from("payment-receipts")
+        .upload(path, blob, { contentType: blob.type || "image/jpeg" });
+      if(up.error) throw up.error;
+      const at = await sb.rpc("attach_receipt", { p_order_number: orderNumber, p_receipt_path: up.data.path });
+      if(at.error) throw at.error;
+    }catch(e){
+      console.error("Receipt upload failed", e);
+      pendingOrderNumber = orderNumber;
+      const why = [e.code, e.status || e.statusCode, e.message || e.error]
+        .filter(Boolean).join(" · ").slice(0,200);
+      err.innerHTML = `Your order <strong>${esc(orderNumber)}</strong> was created, but the receipt didn't
+        upload. Please try uploading it again below — your order is already saved, this step just attaches
+        the receipt to it.<span class="why">${esc(why)}</span>`;
+      err.style.display = "block";
+      go.disabled = false; go.textContent = "Retry receipt upload";
+      return;
     }
-    BAG = []; saveBag();
-    showDone(orderNumber, receiptOk);
+    BAG = []; saveBag(); pendingOrderNumber = null;
+    showDone(orderNumber, true);
   }catch(e){
     console.error(e);
     const raw = String(e.message || e.error || "");
@@ -703,10 +774,40 @@ async function submitOrder(){
     go.disabled = false; go.textContent = "Place order";
   }
 }
-function showDone(orderNumber, receiptOk){
-  const warn = (receiptOk === false)
-    ? `<div class="note" style="text-align:left">Your order is saved, but the receipt didn't upload.
-         Please send the screenshot to us on Instagram with your order number.</div>` : "";
+async function retryReceipt(){
+  const file = document.getElementById("k-receipt").files[0];
+  const err = document.getElementById("k-err"), go = document.getElementById("k-go");
+  err.style.display = "none";
+  if(!file || !file.size){
+    err.textContent = "Please choose the receipt file again.";
+    err.style.display = "block";
+    return;
+  }
+  go.disabled = true; go.textContent = "Uploading receipt…";
+  try{
+    const blob = await shrinkImage(file);
+    const ext = (blob.type === "image/jpeg") ? "jpg"
+              : (((file.name||"").split(".").pop() || "jpg").toLowerCase());
+    const path = `${pendingOrderNumber}/${Date.now()}.${ext}`;
+    const up = await sb.storage.from("payment-receipts")
+      .upload(path, blob, { contentType: blob.type || "image/jpeg" });
+    if(up.error) throw up.error;
+    const at = await sb.rpc("attach_receipt", { p_order_number: pendingOrderNumber, p_receipt_path: up.data.path });
+    if(at.error) throw at.error;
+    const done = pendingOrderNumber;
+    pendingOrderNumber = null;
+    BAG = []; saveBag();
+    showDone(done);
+  }catch(e){
+    console.error("Receipt retry failed", e);
+    const why = [e.code, e.status || e.statusCode, e.message || e.error].filter(Boolean).join(" · ").slice(0,200);
+    err.innerHTML = `Still couldn't upload the receipt.<span class="why">${esc(why)}</span>
+      You can also send it to us on Instagram with order number <strong>${esc(pendingOrderNumber)}</strong>.`;
+    err.style.display = "block";
+    go.disabled = false; go.textContent = "Retry receipt upload";
+  }
+}
+function showDone(orderNumber){
   document.getElementById("csheet").innerHTML = `
     <div class="done">
       <div class="rule" style="margin-bottom:22px"></div>
@@ -714,7 +815,6 @@ function showDone(orderNumber, receiptOk){
       <p style="color:var(--soft-ink);font-size:14.5px">Thank you — I'll message you to confirm.</p>
       <div class="ordno">${esc(orderNumber)}</div>
       <p style="color:var(--soft-ink);font-size:12.5px">Please keep this number for reference.</p>
-      ${warn}
       <button class="btn ghost" style="margin-top:22px" onclick="closeCheckout(); window.scrollTo({top:0,behavior:'smooth'})">Back to the shop</button>
     </div>`;
 }
