@@ -179,10 +179,12 @@
   <aside class="side" id="side">
     <div class="brand">Hooked <em>Heaven</em></div>
     <nav>
-      <button data-v="products"  onclick="go('products')">Products</button>
-      <button data-v="orders"    onclick="go('orders')">Orders</button>
-      <button data-v="shipping"  onclick="go('shipping')">Delivery areas</button>
-      <button data-v="settings"  onclick="go('settings')">Settings</button>
+      <button data-v="products"   onclick="go('products')">Products</button>
+      <button data-v="categories" onclick="go('categories')">Categories</button>
+      <button data-v="orders"     onclick="go('orders')">Orders</button>
+      <button data-v="shipping"   onclick="go('shipping')">Delivery areas</button>
+      <button data-v="pages"      onclick="go('pages')">Pages</button>
+      <button data-v="settings"   onclick="go('settings')">Settings</button>
     </nav>
     <button class="out" onclick="doLogout()">Sign out</button>
   </aside>
@@ -204,7 +206,7 @@
 const SUPABASE_URL = "https://tztpscrdaryzgqzkxtgj.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_ZaUk5SrrJkRrcWnvCXClnQ_ErsmhGC8";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-let PRODS=[], ORDERS=[], ZONES=[], SET={}, view="products", LOAD_ERR=[], PIMAGES={};
+let PRODS=[], ORDERS=[], ZONES=[], SET={}, view="products", LOAD_ERR=[], PIMAGES={}, CATS=[], PAGES=[];
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function imgUrl(p){ if(!p) return ""; return sb.storage.from("product-images").getPublicUrl(p).data.publicUrl; }
 function money(n){ return (SET.currency||"PKR") + " " + Number(n).toLocaleString(); }
@@ -296,7 +298,11 @@ function showLogin(){ document.getElementById("login").style.display="flex"; doc
 function showApp(){ document.getElementById("login").style.display="none"; document.getElementById("app").classList.add("active"); loadAll(); }
 sb.auth.onAuthStateChange(e=>{ if(e==="SIGNED_OUT") showLogin(); });
 /* ---------- data ---------- */
-async function loadAll(){ LOAD_ERR=[]; await Promise.all([ldProds(),ldOrders(),ldZones(),ldSet(),ldImages()]); go(view); }
+async function loadAll(){ LOAD_ERR=[]; await Promise.all([ldProds(),ldOrders(),ldZones(),ldSet(),ldImages(),ldCats(),ldPages()]); go(view); }
+async function ldCats(){ const r=await sb.from("categories").select("*").order("sort_order");
+  if(r.error){ console.error(r.error); LOAD_ERR.push("categories"); } else CATS=r.data; }
+async function ldPages(){ const r=await sb.from("shop_pages").select("*").order("sort_order");
+  if(r.error){ console.error(r.error); LOAD_ERR.push("pages"); } else PAGES=r.data; }
 async function ldProds(){ const r=await sb.from("products").select("*").order("sort_order");
   if(r.error){ console.error(r.error); LOAD_ERR.push("products"); } else PRODS=r.data; }
 async function ldImages(){ const r=await sb.from("product_images").select("*").order("sort_order");
@@ -318,7 +324,8 @@ function go(v){
   view=v;
   document.querySelectorAll(".side nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
   side(false);
-  ({products:vProducts, orders:vOrders, shipping:vZones, settings:vSettings}[v])();
+  ({products:vProducts, categories:vCats, orders:vOrders, shipping:vZones,
+    pages:vPages, settings:vSettings}[v])();
   if(LOAD_ERR.length){
     document.getElementById("main").insertAdjacentHTML("afterbegin",
       `<div class="warnbar">Some data didn't load (${esc(LOAD_ERR.join(", "))}).
@@ -336,7 +343,8 @@ function vProducts(){
     const n = (PIMAGES[p.id]||[]).length;
     return `<tr>
       <td class="c-thumb">${p.image_path?`<img class="thumb" src="${imgUrl(p.image_path)}">`:'<div class="thumb"></div>'}</td>
-      <td class="c-title"><strong>${esc(p.name)}</strong></td>
+      <td class="c-title"><strong>${esc(p.name)}</strong>${(()=>{ const c=CATS.find(x=>x.id===p.category_id);
+        return c?`<br><span style="color:var(--soft-ink);font-size:12px">${esc(c.name)}</span>`:""; })()}</td>
       <td>${money(p.price)}</td>
       <td><span class="pill ${p.in_stock?"p-yes":"p-no"}">${p.in_stock?"Available":"Unavailable"}</span></td>
       <td class="c-act">
@@ -361,6 +369,12 @@ function edProd(id){
     <div class="fld"><label>Price (${esc(SET.currency||"PKR")})</label><input id="f-price" type="number" min="0" step="1" value="${p?p.price:""}"></div>
     <div class="fld"><label>Short description</label><textarea id="f-desc" rows="3" placeholder="e.g. Pair of sunflowers · cotton yarn">${p?esc(p.description||""):""}</textarea></div>
     <div class="hint">The first two lines show on the shop page — the full text appears when a customer taps the product.</div>
+    <div class="fld"><label>Category</label>
+      <select id="f-cat">
+        <option value="">No category (shows under All Products only)</option>
+        ${CATS.map(c=>`<option value="${c.id}" ${p&&p.category_id===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
+      </select></div>
+    <div class="hint">Customers can browse this category from the menu on your site.</div>
     <div class="fld"><label>Colours (optional)</label><input id="f-colors" value="${p?esc(p.colors||""):""}" placeholder="e.g. Pink, Cream, Sage"></div>
     <div class="hint">Separate with commas. Customers can pick one, but don't have to — this is not a stock count per colour.</div>
     <div class="fld"><label>Video link (optional)</label><input id="f-video" type="url" value="${p?esc(p.video_url||""):""}" placeholder="Paste an Instagram Reel or YouTube link"></div>
@@ -386,8 +400,10 @@ async function svProd(id){
     if(!s || !s.session) throw new Error("You've been signed out. Please sign in again.");
     const colorsRaw = document.getElementById("f-colors").value.trim();
     const videoRaw = document.getElementById("f-video").value.trim();
+    const catRaw = document.getElementById("f-cat").value;
     const payload={name, price, description:desc||null, in_stock:stock,
-                   colors: colorsRaw || null, video_url: videoRaw || null};
+                   colors: colorsRaw || null, video_url: videoRaw || null,
+                   category_id: catRaw || null};
     if(file){
       stage="uploading the photo";
       btn.textContent="Uploading photo…";
@@ -472,6 +488,131 @@ async function delProd(id){
   const r=await sb.from("products").delete().eq("id",id);
   if(r.error){ alert("Could not delete. "+errText(r.error)); return; }
   await ldProds(); vProducts();
+}
+/* ============================================================
+   CATEGORIES
+   ============================================================ */
+function slugify(t){
+  return String(t||"").toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,40);
+}
+function vCats(){
+  const rows = CATS.map(c=>{
+    const n = PRODS.filter(p=>p.category_id===c.id).length;
+    return `<tr>
+      <td class="c-title"><strong>${esc(c.name)}</strong>${c.tagline?`<br><span style="color:var(--soft-ink);font-size:12px">${esc(c.tagline)}</span>`:""}</td>
+      <td>${n} product${n===1?"":"s"}</td>
+      <td class="c-act">
+        <button class="btn ghost sm" onclick="edCat('${c.id}')">Edit</button>
+        <button class="btn danger sm" onclick="delCat('${c.id}')">Delete</button>
+      </td></tr>`;}).join("");
+  const uncategorised = PRODS.filter(p=>!p.category_id).length;
+  document.getElementById("main").innerHTML = `
+    <div class="head"><h1>Categories</h1><button class="btn forest" onclick="edCat()">+ Add category</button></div>
+    <div class="card" style="background:var(--mist);border:none;font-size:13px">
+      Categories appear in the menu on your site. A product can belong to one category, or none —
+      products with no category still show under <strong>All Products</strong>.
+      ${uncategorised?`<br><br><strong>${uncategorised} product${uncategorised===1?" has":"s have"} no category yet.</strong>
+        You can set one by editing the product.`:""}
+    </div>
+    <div class="card">${CATS.length?`<table><thead><tr><th>Category</th><th>Products</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="state">No categories yet.</div>'}</div>`;
+}
+function edCat(id){
+  const c = id?CATS.find(x=>x.id===id):null;
+  document.getElementById("sheet").innerHTML = `
+    <h2>${c?"Edit category":"Add category"}</h2>
+    <div class="fld"><label>Name</label><input id="c-name" value="${c?esc(c.name):""}" placeholder="e.g. Crochet Keychains"></div>
+    <div class="fld"><label>Short tagline (optional)</label><input id="c-tag" value="${c&&c.tagline?esc(c.tagline):""}" placeholder="e.g. Little companions for your keys"></div>
+    <div class="hint">Shown under the category title on its page.</div>
+    <div class="err" id="c-err" style="display:none"></div>
+    <div class="acts"><button class="btn ghost" onclick="closeSheet()">Cancel</button><button class="btn forest" id="c-save" onclick="svCat('${c?c.id:""}')">Save</button></div>`;
+  openSheet();
+}
+async function svCat(id){
+  const name=document.getElementById("c-name").value.trim();
+  const tag=document.getElementById("c-tag").value.trim();
+  const err=document.getElementById("c-err"), btn=document.getElementById("c-save");
+  err.style.display="none";
+  if(!name){ showErr(err,"Please enter a category name."); return; }
+  btn.disabled=true; btn.textContent="Saving…";
+  try{
+    const payload={ name, tagline: tag||null };
+    let r;
+    if(id){
+      r = await sb.from("categories").update(payload).eq("id",id);
+    }else{
+      // slug is what the site URL uses; keep it unique without bothering the owner
+      let base = slugify(name) || "category";
+      let slug = base, n = 2;
+      while(CATS.some(c=>c.slug===slug)){ slug = base+"-"+n; n++; }
+      r = await sb.from("categories").insert({...payload, slug, sort_order:nextSort(CATS)});
+    }
+    if(r.error) throw r.error;
+    closeSheet(); await ldCats(); vCats();
+  }catch(e){
+    console.error("[svCat]",e);
+    showErr(err,"Could not save the category.",errText(e));
+    btn.disabled=false; btn.textContent="Save";
+  }
+}
+async function delCat(id){
+  const n = PRODS.filter(p=>p.category_id===id).length;
+  const warn = n
+    ? `Delete this category?\n\n${n} product${n===1?"":"s"} will stay on your site but lose ${n===1?"its":"their"} category — they'll still show under All Products.`
+    : "Delete this category?";
+  if(!confirm(warn)) return;
+  const r=await sb.from("categories").delete().eq("id",id);
+  if(r.error){ alert("Could not delete. "+errText(r.error)); return; }
+  await Promise.all([ldCats(), ldProds()]);
+  vCats();
+}
+/* ============================================================
+   INFO PAGES (About / Returns / Contact)
+   ============================================================ */
+function vPages(){
+  const rows = PAGES.map(pg=>`<tr>
+      <td class="c-title"><strong>${esc(pg.title)}</strong><br>
+        <span style="color:var(--soft-ink);font-size:12px">${esc((pg.body||"").slice(0,60))}${(pg.body||"").length>60?"…":""}</span></td>
+      <td><span class="pill ${pg.is_visible?"p-yes":"p-no"}">${pg.is_visible?"Visible":"Hidden"}</span></td>
+      <td class="c-act"><button class="btn ghost sm" onclick="edPage('${pg.slug}')">Edit</button></td>
+    </tr>`).join("");
+  document.getElementById("main").innerHTML = `
+    <div class="head"><h1>Pages</h1></div>
+    <div class="card" style="background:var(--mist);border:none;font-size:13px">
+      These pages appear in the menu on your site. Write them in your own words —
+      leave a blank line between paragraphs. Hiding a page removes it from the menu.
+    </div>
+    <div class="card">${PAGES.length?`<table><thead><tr><th>Page</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="state">No pages yet.</div>'}</div>`;
+}
+function edPage(slug){
+  const pg = PAGES.find(x=>x.slug===slug); if(!pg) return;
+  document.getElementById("sheet").innerHTML = `
+    <h2>${esc(pg.title)}</h2>
+    <div class="fld"><label>Page title</label><input id="g-title" value="${esc(pg.title)}"></div>
+    <div class="fld"><label>Content</label><textarea id="g-body" rows="12">${esc(pg.body||"")}</textarea></div>
+    <div class="hint">Leave a blank line between paragraphs. Plain text only — no formatting needed.</div>
+    <div class="check"><input type="checkbox" id="g-vis" ${pg.is_visible?"checked":""}><label style="margin:0;text-transform:none;font-weight:400;font-size:14px;letter-spacing:0" for="g-vis">Show this page in the menu</label></div>
+    <div class="err" id="g-err" style="display:none"></div>
+    <div class="acts"><button class="btn ghost" onclick="closeSheet()">Cancel</button><button class="btn forest" id="g-save" onclick="svPage('${esc(slug)}')">Save</button></div>`;
+  openSheet();
+}
+async function svPage(slug){
+  const title=document.getElementById("g-title").value.trim();
+  const bodyTxt=document.getElementById("g-body").value;
+  const vis=document.getElementById("g-vis").checked;
+  const err=document.getElementById("g-err"), btn=document.getElementById("g-save");
+  err.style.display="none";
+  if(!title){ showErr(err,"Please enter a page title."); return; }
+  btn.disabled=true; btn.textContent="Saving…";
+  try{
+    const r=await sb.from("shop_pages").update({ title, body:bodyTxt, is_visible:vis }).eq("slug",slug);
+    if(r.error) throw r.error;
+    closeSheet(); await ldPages(); vPages();
+  }catch(e){
+    console.error("[svPage]",e);
+    showErr(err,"Could not save the page.",errText(e));
+    btn.disabled=false; btn.textContent="Save";
+  }
 }
 /* ============================================================
    ORDERS
