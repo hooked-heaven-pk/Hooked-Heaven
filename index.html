@@ -111,6 +111,30 @@
     color:var(--walnut);background:var(--gold-wash);padding:3px 12px;border-radius:999px}
   .card .arch{border:1px solid var(--hair)}
   .card:hover .arch{border-color:var(--gold)}
+  /* ---------- gallery (product detail) ---------- */
+  .gal{position:relative}
+  .gal .arch{margin-bottom:0}
+  .gal-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;
+    border-radius:inherit;-webkit-overflow-scrolling:touch}
+  .gal-track::-webkit-scrollbar{display:none}
+  .gal-track .slide{flex:0 0 100%;scroll-snap-align:start;aspect-ratio:4/5}
+  .gal-track .slide img{width:100%;height:100%;object-fit:cover;display:block}
+  .gal-dots{display:flex;gap:6px;justify-content:center;margin-top:12px}
+  .gal-dots span{width:6px;height:6px;border-radius:50%;background:var(--hair);transition:.2s}
+  .gal-dots span.on{background:var(--forest);width:16px;border-radius:3px}
+  /* ---------- colour chips ---------- */
+  .colors{margin-bottom:20px}
+  .colors .lbl{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft-ink);margin-bottom:10px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{border:1px solid var(--hair);background:none;border-radius:999px;padding:8px 16px;
+    font-size:13px;color:var(--ink);transition:.2s}
+  .chip:hover{border-color:var(--gold)}
+  .chip.on{border-color:var(--forest);background:var(--sage-wash);color:var(--forest);font-weight:500}
+  /* ---------- video link ---------- */
+  .vid-link{display:inline-flex;align-items:center;gap:6px;font-size:12px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--forest);text-decoration:none;margin-bottom:20px}
+  .vid-link:hover{color:var(--walnut)}
+  .vid-link svg{width:13px;height:13px;flex:0 0 auto}
   /* ---------- note band ---------- */
   .band{margin:104px 0 0;padding:74px 0;background:var(--sage-wash);
     border-top:1px solid var(--gold-soft);border-bottom:1px solid var(--gold-soft);text-align:center}
@@ -274,7 +298,7 @@
 const SUPABASE_URL = "https://tztpscrdaryzgqzkxtgj.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_ZaUk5SrrJkRrcWnvCXClnQ_ErsmhGC8";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-let PRODUCTS = [], ZONES = [], SETTINGS = {}, BAG = [];
+let PRODUCTS = [], ZONES = [], SETTINGS = {}, BAG = [], PRODUCT_IMAGES = {};
 const BAG_KEY = "hh_bag_v1";
 /* ---------- helpers ---------- */
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -285,6 +309,15 @@ function imgUrl(path){ if(!path) return ""; return sb.storage.from("product-imag
 function archOf(p, src){
   const url = src || (p.image_path ? imgUrl(p.image_path) : "");
   return `<div class="arch">${url ? `<img src="${url}" alt="${esc(p.name)}">` : ""}</div>`;
+}
+function colorList(p){
+  return String(p.colors||"").split(",").map(c=>c.trim()).filter(Boolean);
+}
+function galleryOf(p){
+  // product_images first (up to 4, in order), falling back to the single cover photo
+  const extra = (PRODUCT_IMAGES[p.id]||[]).map(r => imgUrl(r.path));
+  if(extra.length) return extra;
+  return p.image_path ? [imgUrl(p.image_path)] : [];
 }
 function loadBag(){ try{ BAG = JSON.parse(localStorage.getItem(BAG_KEY)) || []; }catch(e){ BAG = []; } }
 /* A bag lives in localStorage for days. Products get renamed, re-uploaded or
@@ -301,7 +334,16 @@ function reconcileBag(){
     i.image_url = p.image_path ? imgUrl(p.image_path) : "";
     i.in_stock = p.in_stock;
     i.quantity = Math.min(99, Math.max(1, Number(i.quantity) || 1));
+    if(i.selected_color && !colorList(p).includes(i.selected_color)) i.selected_color = null;
   });
+  // merging could now create duplicate lines (same product+colour) — collapse them
+  const merged = [];
+  BAG.forEach(i => {
+    const m = merged.find(x => lineKey(x) === lineKey(i));
+    if(m) m.quantity = Math.min(99, m.quantity + i.quantity);
+    else merged.push(i);
+  });
+  BAG = merged;
   if(JSON.stringify(BAG) !== before) saveBag();
   countBag();
 }
@@ -339,10 +381,11 @@ async function shrinkImage(file, maxPx=1600, quality=0.82){
    LOAD
    ============================================================ */
 async function loadAll(){
-  const [prods, zones, setts] = await Promise.all([
+  const [prods, zones, setts, images] = await Promise.all([
     sb.from("products").select("*").order("sort_order"),
     sb.from("shipping_zones").select("*").eq("is_active", true).order("sort_order"),
-    sb.from("shop_settings").select("*")
+    sb.from("shop_settings").select("*"),
+    sb.from("product_images").select("*").order("sort_order")
   ]);
   if(prods.error){
     document.getElementById("grid").innerHTML = '<div class="state">Could not load the shop right now. Please refresh.</div>';
@@ -351,6 +394,10 @@ async function loadAll(){
   }
   PRODUCTS = prods.data || [];
   ZONES = zones.data || [];
+  PRODUCT_IMAGES = {};
+  (images.data || []).forEach(img => {
+    (PRODUCT_IMAGES[img.product_id] ||= []).push(img);
+  });
   SETTINGS = {};
   (setts.data || []).forEach(s => SETTINGS[s.key] = s.value);
   document.title = SETTINGS.shop_name || "Hooked Heaven";
@@ -399,12 +446,19 @@ function renderGrid(){
     </button>`).join("");
 }
 /* ---------- product ---------- */
-let current = null, qty = 1;
+let current = null, qty = 1, selectedColor = null;
 function openProduct(id){
   current = PRODUCTS.find(p=>p.id===id); if(!current) return;
-  qty = 1; drawProduct();
+  qty = 1;
+  const colors = colorList(current);
+  selectedColor = colors.length === 1 ? colors[0] : null;  // pre-pick when there's only one
+  drawProduct();
   document.getElementById("pov").classList.add("active");
   document.body.style.overflow = "hidden";
+}
+function pickColor(c){
+  selectedColor = (selectedColor === c) ? null : c;  // tap again to deselect — colour stays optional
+  document.querySelectorAll(".chip").forEach(b => b.classList.toggle("on", b.dataset.c === selectedColor));
 }
 function closeProduct(){
   document.getElementById("pov").classList.remove("active");
@@ -412,14 +466,42 @@ function closeProduct(){
 }
 function drawProduct(){
   const p = current;
+  const photos = galleryOf(p);
+  const gallery = photos.length > 1
+    ? `<div class="arch gal">
+         <div class="gal-track" id="gal-track" onscroll="onGalScroll()">
+           ${photos.map(u=>`<div class="slide"><img src="${u}" alt="${esc(p.name)}"></div>`).join("")}
+         </div>
+       </div>
+       <div class="gal-dots" id="gal-dots">${photos.map((_,i)=>`<span class="${i===0?"on":""}"></span>`).join("")}</div>`
+    : archOf(p, photos[0]);
+
+  const colors = colorList(p);
+  const colorBlock = colors.length ? `
+    <div class="colors">
+      <div class="lbl">Colour${selectedColor ? ": " + esc(selectedColor) : " (optional)"}</div>
+      <div class="chips">
+        ${colors.map(c => `<button type="button" class="chip ${selectedColor===c?"on":""}"
+          data-c="${esc(c)}" onclick="pickColor('${esc(c).replace(/'/g,"\\'")}')" >${esc(c)}</button>`).join("")}
+      </div>
+    </div>` : "";
+
+  const videoBlock = p.video_url ? `
+    <a class="vid-link" href="${esc(p.video_url)}" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>
+      Watch video
+    </a>` : "";
+
   document.getElementById("psheet").innerHTML = `
     <button class="x" onclick="closeProduct()">&times;</button>
     <div class="detail">
-      ${archOf(p)}
+      ${gallery}
       <div class="body">
         <h3>${esc(p.name)}</h3>
         <div class="spec">${esc(p.description || "")}</div>
         <div class="price">${money(p.price)}</div>
+        ${videoBlock}
+        ${colorBlock}
         ${p.in_stock ? `
           <div class="qty">
             <button onclick="step(-1)">&minus;</button><span id="q">${qty}</span><button onclick="step(1)">+</button>
@@ -429,44 +511,53 @@ function drawProduct(){
       </div>
     </div>`;
 }
+function onGalScroll(){
+  const track = document.getElementById("gal-track"); if(!track) return;
+  const i = Math.round(track.scrollLeft / track.clientWidth);
+  document.querySelectorAll("#gal-dots span").forEach((d,idx)=>d.classList.toggle("on", idx===i));
+}
 function step(d){ qty = Math.min(99, Math.max(1, qty+d)); document.getElementById("q").textContent = qty; }
-function addCurrent(){ addToBag(current, qty); closeProduct(); openBag(); }
+function addCurrent(){ addToBag(current, qty, selectedColor); closeProduct(); openBag(); }
 /* ---------- bag ---------- */
-function addToBag(p,n){
-  const ex = BAG.find(i=>i.product_id===p.id);
+function addToBag(p,n,color){
+  // a different colour of the same product is a separate line
+  const key = p.id + "|" + (color || "");
+  const ex = BAG.find(i => (i.product_id + "|" + (i.selected_color||"")) === key);
   if(ex) ex.quantity = Math.min(99, ex.quantity + n);
   else BAG.push({ product_id:p.id, name:p.name, price:Number(p.price),
                   image_url: p.image_path ? imgUrl(p.image_path) : "",
-                  in_stock:p.in_stock, quantity:n });
+                  in_stock:p.in_stock, selected_color: color || null, quantity:n });
   saveBag(); drawBag();
 }
-function bagStep(id,d){
-  const it = BAG.find(i=>i.product_id===id); if(!it) return;
+function lineKey(i){ return i.product_id + "|" + (i.selected_color||""); }
+function bagStep(key,d){
+  const it = BAG.find(i=>lineKey(i)===key); if(!it) return;
   it.quantity += d;
-  if(it.quantity <= 0) BAG = BAG.filter(i=>i.product_id!==id);
+  if(it.quantity <= 0) BAG = BAG.filter(i=>lineKey(i)!==key);
   saveBag(); drawBag();
 }
-function bagRemove(id){ BAG = BAG.filter(i=>i.product_id!==id); saveBag(); drawBag(); }
+function bagRemove(key){ BAG = BAG.filter(i=>lineKey(i)!==key); saveBag(); drawBag(); }
 function drawBag(){
   const items = document.getElementById("ditems"), foot = document.getElementById("dfoot");
   if(!BAG.length){
     items.innerHTML = '<div class="state">Your bag is empty</div>';
     foot.innerHTML = ""; return;
   }
-  items.innerHTML = BAG.map(i => `
+  items.innerHTML = BAG.map(i => { const k = esc(lineKey(i)); return `
     <div class="ci">
       <div class="thumb">${i.image_url ? `<img src="${i.image_url}" alt="${esc(i.name)}">` : ""}</div>
       <div style="flex:1;min-width:0">
         <div class="nm">${esc(i.name)}</div>
+        ${i.selected_color ? `<div style="font-size:11.5px;color:var(--soft-ink);margin-top:1px">${esc(i.selected_color)}</div>` : ""}
         <div class="pr">${i.in_stock === false ? "Currently unavailable" : money(i.price)}</div>
         <div class="row">
-          <button onclick="bagStep('${i.product_id}',-1)">&minus;</button>
+          <button onclick="bagStep('${k}',-1)">&minus;</button>
           <span style="font-size:13px">${i.quantity}</span>
-          <button onclick="bagStep('${i.product_id}',1)">+</button>
+          <button onclick="bagStep('${k}',1)">+</button>
         </div>
-        <button class="rm" onclick="bagRemove('${i.product_id}')">Remove</button>
+        <button class="rm" onclick="bagRemove('${k}')">Remove</button>
       </div>
-    </div>`).join("");
+    </div>`;}).join("");
   foot.innerHTML = `
     <div class="srow"><span>Subtotal</span><span>${money(subtotal())}</span></div>
     <div class="srow" style="font-size:12px">Delivery calculated at checkout</div>
@@ -567,7 +658,7 @@ async function submitOrder(){
       p_customer_address: address,
       p_city: city,
       p_zone_id: zone.id,
-      p_items: BAG.map(i => ({ product_id: i.product_id, quantity: i.quantity }))
+      p_items: BAG.map(i => ({ product_id: i.product_id, quantity: i.quantity, selected_color: i.selected_color || null }))
     });
     if(error) throw error;
     if(!orderNumber) throw new Error("the server did not return an order number");
