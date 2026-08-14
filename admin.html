@@ -140,6 +140,18 @@
   .odet td{padding:4px 0;border:none}
   .rcpt{width:100%;max-height:320px;object-fit:contain;border:1px solid var(--hair);border-radius:10px;background:var(--mist)}
   .grid1{display:grid;gap:14px;max-width:460px}
+  /* ---------- product photo manager (up to 4) ---------- */
+  .pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+  .pgrid .slot{position:relative;aspect-ratio:1/1;border-radius:10px;overflow:hidden;
+    background:var(--mist);border:1px solid var(--hair)}
+  .pgrid .slot img{width:100%;height:100%;object-fit:cover;display:block}
+  .pgrid .slot .rm{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;
+    background:rgba(45,51,35,.72);color:#fff;border:none;font-size:14px;line-height:1;cursor:pointer}
+  .pgrid .slot .cover{position:absolute;bottom:0;left:0;right:0;background:rgba(45,51,35,.72);
+    color:#fff;font-size:9px;letter-spacing:.08em;text-transform:uppercase;text-align:center;padding:3px 0}
+  .pgrid .empty{display:flex;align-items:center;justify-content:center;color:var(--soft-ink);font-size:10px;
+    letter-spacing:.06em;text-transform:uppercase;text-align:center;padding:4px}
+  .pcount{font-size:11.5px;color:var(--soft-ink);margin-bottom:14px}
   @media(max-width:640px){
     .fld input,.fld textarea,.fld select,.login-box input{font-size:16px}
     .ov{padding:0;align-items:flex-start}
@@ -192,7 +204,7 @@
 const SUPABASE_URL = "https://tztpscrdaryzgqzkxtgj.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_ZaUk5SrrJkRrcWnvCXClnQ_ErsmhGC8";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-let PRODS=[], ORDERS=[], ZONES=[], SET={}, view="products", LOAD_ERR=[];
+let PRODS=[], ORDERS=[], ZONES=[], SET={}, view="products", LOAD_ERR=[], PIMAGES={};
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function imgUrl(p){ if(!p) return ""; return sb.storage.from("product-images").getPublicUrl(p).data.publicUrl; }
 function money(n){ return (SET.currency||"PKR") + " " + Number(n).toLocaleString(); }
@@ -284,9 +296,12 @@ function showLogin(){ document.getElementById("login").style.display="flex"; doc
 function showApp(){ document.getElementById("login").style.display="none"; document.getElementById("app").classList.add("active"); loadAll(); }
 sb.auth.onAuthStateChange(e=>{ if(e==="SIGNED_OUT") showLogin(); });
 /* ---------- data ---------- */
-async function loadAll(){ LOAD_ERR=[]; await Promise.all([ldProds(),ldOrders(),ldZones(),ldSet()]); go(view); }
+async function loadAll(){ LOAD_ERR=[]; await Promise.all([ldProds(),ldOrders(),ldZones(),ldSet(),ldImages()]); go(view); }
 async function ldProds(){ const r=await sb.from("products").select("*").order("sort_order");
   if(r.error){ console.error(r.error); LOAD_ERR.push("products"); } else PRODS=r.data; }
+async function ldImages(){ const r=await sb.from("product_images").select("*").order("sort_order");
+  if(r.error){ console.error(r.error); LOAD_ERR.push("photos"); return; }
+  PIMAGES={}; (r.data||[]).forEach(img=>{ (PIMAGES[img.product_id] ||= []).push(img); }); }
 async function ldOrders(){ const r=await sb.from("orders").select("*, order_items(*)").order("created_at",{ascending:false});
   if(r.error){ console.error(r.error); LOAD_ERR.push("orders"); } else ORDERS=r.data; }
 async function ldZones(){ const r=await sb.from("shipping_zones").select("*").order("sort_order");
@@ -317,15 +332,18 @@ document.getElementById("ov").addEventListener("click",e=>{ if(e.target.id==="ov
    PRODUCTS
    ============================================================ */
 function vProducts(){
-  const rows = PRODS.map(p=>`<tr>
+  const rows = PRODS.map(p=>{
+    const n = (PIMAGES[p.id]||[]).length;
+    return `<tr>
       <td class="c-thumb">${p.image_path?`<img class="thumb" src="${imgUrl(p.image_path)}">`:'<div class="thumb"></div>'}</td>
       <td class="c-title"><strong>${esc(p.name)}</strong></td>
       <td>${money(p.price)}</td>
       <td><span class="pill ${p.in_stock?"p-yes":"p-no"}">${p.in_stock?"Available":"Unavailable"}</span></td>
       <td class="c-act">
         <button class="btn ghost sm" onclick="edProd('${p.id}')">Edit</button>
+        <button class="btn ghost sm" onclick="edPhotos('${p.id}')">Photos${n?` (${n})`:""}</button>
         <button class="btn danger sm" onclick="delProd('${p.id}')">Delete</button>
-      </td></tr>`).join("");
+      </td></tr>`;}).join("");
   document.getElementById("main").innerHTML = `
     <div class="head"><h1>Products</h1><button class="btn forest" onclick="edProd()">+ Add product</button></div>
     <div class="card">${PRODS.length?`<table><thead><tr><th></th><th>Name</th><th>Price</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="state">No products yet.</div>'}</div>`;
@@ -335,12 +353,18 @@ function edProd(id){
   document.getElementById("sheet").innerHTML = `
     <h2>${p?"Edit product":"Add product"}</h2>
     ${p&&p.image_path?`<img class="prev" src="${imgUrl(p.image_path)}">`:""}
-    <div class="fld"><label>Photo</label><input type="file" id="f-img" accept="image/*"></div>
-    <div class="hint">Large photos are resized automatically, so you can upload straight from your phone.</div>
+    <div class="fld"><label>Cover photo</label><input type="file" id="f-img" accept="image/*"></div>
+    <div class="hint">Shown on the shop grid. Large photos are resized automatically, so you can upload straight from your phone.
+      ${p?`Extra photos for the product page are managed separately — use the <strong>Photos</strong> button after saving.`
+          :`You can add up to 4 photos for the product page once this is saved.`}</div>
     <div class="fld"><label>Name</label><input id="f-name" value="${p?esc(p.name):""}" placeholder="e.g. Sunflower Bag Charm"></div>
     <div class="fld"><label>Price (${esc(SET.currency||"PKR")})</label><input id="f-price" type="number" min="0" step="1" value="${p?p.price:""}"></div>
     <div class="fld"><label>Short description</label><textarea id="f-desc" rows="3" placeholder="e.g. Pair of sunflowers · cotton yarn">${p?esc(p.description||""):""}</textarea></div>
     <div class="hint">The first two lines show on the shop page — the full text appears when a customer taps the product.</div>
+    <div class="fld"><label>Colours (optional)</label><input id="f-colors" value="${p?esc(p.colors||""):""}" placeholder="e.g. Pink, Cream, Sage"></div>
+    <div class="hint">Separate with commas. Customers can pick one, but don't have to — this is not a stock count per colour.</div>
+    <div class="fld"><label>Video link (optional)</label><input id="f-video" type="url" value="${p?esc(p.video_url||""):""}" placeholder="Paste an Instagram Reel or YouTube link"></div>
+    <div class="hint">Shown as a "Watch video" link on the product page. We don't store the video itself.</div>
     <div class="check"><input type="checkbox" id="f-stock" ${!p||p.in_stock?"checked":""}><label style="margin:0;text-transform:none;font-weight:400;font-size:14px;letter-spacing:0" for="f-stock">Available to order</label></div>
     <div class="err" id="f-err" style="display:none"></div>
     <div class="acts"><button class="btn ghost" onclick="closeSheet()">Cancel</button><button class="btn forest" id="f-save" onclick="svProd('${p?p.id:""}')">Save</button></div>`;
@@ -360,7 +384,10 @@ async function svProd(id){
   try{
     const { data:s } = await sb.auth.getSession();
     if(!s || !s.session) throw new Error("You've been signed out. Please sign in again.");
-    const payload={name, price, description:desc||null, in_stock:stock};
+    const colorsRaw = document.getElementById("f-colors").value.trim();
+    const videoRaw = document.getElementById("f-video").value.trim();
+    const payload={name, price, description:desc||null, in_stock:stock,
+                   colors: colorsRaw || null, video_url: videoRaw || null};
     if(file){
       stage="uploading the photo";
       btn.textContent="Uploading photo…";
@@ -369,14 +396,76 @@ async function svProd(id){
     stage="saving the product";
     btn.textContent="Saving…";
     const r = id ? await sb.from("products").update(payload).eq("id",id)
-                 : await sb.from("products").insert({...payload, sort_order:nextSort(PRODS)});
+                 : await sb.from("products").insert({...payload, sort_order:nextSort(PRODS)}).select();
     if(r.error) throw r.error;
+    const savedId = id || (r.data && r.data[0] && r.data[0].id);
     closeSheet(); await ldProds(); vProducts();
+    if(!id && savedId) edPhotos(savedId);  // brand-new product: offer photos immediately
   }catch(e){
     console.error("[svProd]",stage,e);
     showErr(err,"Could not save while "+stage+". Please try again.", errText(e));
     btn.disabled=false; btn.textContent="Save";
   }
+}
+/* ============================================================
+   PRODUCT PHOTOS (up to 4, separate from the grid cover photo)
+   ============================================================ */
+function edPhotos(productId){
+  const p = PRODS.find(x=>x.id===productId); if(!p) return;
+  const imgs = (PIMAGES[productId]||[]).slice().sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+  const slots = [0,1,2,3].map(i => {
+    const img = imgs[i];
+    if(img) return `<div class="slot">
+        <img src="${imgUrl(img.path)}">
+        <button class="rm" onclick="delPhoto('${productId}','${img.id}')" title="Remove">&times;</button>
+        ${i===0?'<div class="cover">Shown first</div>':""}
+      </div>`;
+    return `<div class="slot empty">Empty</div>`;
+  }).join("");
+  document.getElementById("sheet").innerHTML = `
+    <h2>Photos — ${esc(p.name)}</h2>
+    <div class="pgrid">${slots}</div>
+    <div class="pcount">${imgs.length} of 4 photos. The first photo is shown first in the product gallery —
+      remove and re-add to reorder.</div>
+    <div class="fld"><label>Add a photo</label><input type="file" id="ph-file" accept="image/*" ${imgs.length>=4?"disabled":""}></div>
+    <div class="hint">Large photos are resized automatically.</div>
+    <div class="err" id="ph-err" style="display:none"></div>
+    <div class="acts">
+      <button class="btn ghost" onclick="closeSheet()">Done</button>
+      <button class="btn forest" id="ph-add" onclick="addPhoto('${productId}')" ${imgs.length>=4?"disabled":""}>Add photo</button>
+    </div>`;
+  openSheet();
+}
+async function addPhoto(productId){
+  const file = document.getElementById("ph-file").files[0];
+  const err = document.getElementById("ph-err"), btn = document.getElementById("ph-add");
+  err.style.display="none";
+  if(!file){ showErr(err,"Choose a photo first."); return; }
+  if((PIMAGES[productId]||[]).length >= 4){ showErr(err,"This product already has 4 photos."); return; }
+  btn.disabled=true; btn.textContent="Uploading…";
+  try{
+    const path = await uploadImage(file);
+    const nextOrder = (PIMAGES[productId]||[]).reduce((m,x)=>Math.max(m,Number(x.sort_order)||0),0)+1;
+    const r = await sb.from("product_images").insert({ product_id:productId, path, sort_order:nextOrder });
+    if(r.error) throw r.error;
+    await ldImages();
+    edPhotos(productId);
+    vProducts();
+  }catch(e){
+    console.error("[addPhoto]",e);
+    // the database also enforces the 4-photo cap — surface that plainly instead of the raw SQL error
+    const msg = /at most 4 photos/i.test(errText(e)) ? "This product already has 4 photos." : "Could not upload the photo.";
+    showErr(err,msg,errText(e));
+    btn.disabled=false; btn.textContent="Add photo";
+  }
+}
+async function delPhoto(productId,imageId){
+  if(!confirm("Remove this photo?")) return;
+  const r = await sb.from("product_images").delete().eq("id",imageId);
+  if(r.error){ alert("Could not remove. "+errText(r.error)); return; }
+  await ldImages();
+  edPhotos(productId);
+  vProducts();
 }
 async function delProd(id){
   if(!confirm("Delete this product? This can't be undone.")) return;
