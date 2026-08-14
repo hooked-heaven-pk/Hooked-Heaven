@@ -36,7 +36,7 @@
   body{background:var(--paper);color:var(--ink);font-family:"Jost",system-ui,sans-serif;font-weight:300;line-height:1.7}
   img{display:block;max-width:100%}
   a{color:inherit}
-  button{font-family:inherit;cursor:pointer}
+  button{font-family:inherit;cursor:pointer;color:inherit}
   .wrap{max-width:1140px;margin:0 auto;padding:0 32px}
   @media(max-width:640px){.wrap{padding:0 20px}}
   .label{font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;font-weight:500;color:var(--walnut)}
@@ -60,8 +60,10 @@
   .bag:hover{border-color:var(--gold)}
   .bag .n{color:var(--soft-ink)}
   /* ---------- hero ---------- */
-  .hero{display:grid;grid-template-columns:minmax(0,1fr);gap:44px;padding:74px 0 84px;align-items:center}
-  @media(min-width:900px){.hero{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:76px;padding:96px 0 104px}}
+  /* padding-top/bottom only — a bare `padding` here silently overrode .wrap's
+     left/right padding, which is why the hero and grid sat flush to the screen edge */
+  .hero{display:grid;grid-template-columns:minmax(0,1fr);gap:44px;padding-top:74px;padding-bottom:84px;align-items:center}
+  @media(min-width:900px){.hero{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:76px;padding-top:96px;padding-bottom:104px}}
   .hero h1{font-family:"Cormorant Garamond",Georgia,serif;font-weight:300;
     font-size:clamp(42px,6.6vw,72px);line-height:1.08;letter-spacing:-.005em;margin:18px 0 22px}
   .hero h1 em{font-style:italic;color:var(--forest)}
@@ -77,10 +79,15 @@
     border:1px solid var(--gold);opacity:.55;pointer-events:none}
   .hero-arch::before{content:"";position:absolute;inset:-9px;border-radius:999px 999px 14px 14px;
     border:1px solid var(--gold-soft);opacity:.6;pointer-events:none;z-index:1}
+  /* logo mode: a small round medallion, never scaled past the logo's own pixels */
+  .hero-arch.logo-mode{aspect-ratio:1/1;border-radius:50%;background:var(--paper);max-width:240px}
+  .hero-arch.logo-mode::before{inset:-11px;border-radius:50%}
+  .hero-arch.logo-mode::after{border-radius:50%}
+  .hero-arch.logo-mode img{width:100%;height:100%;object-fit:contain;padding:12px;transition:none}
   .hero-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft-ink)}
   /* ---------- shelf ---------- */
-  .shelf{padding:20px 0 10px}
+  .shelf{padding-top:20px;padding-bottom:10px}
   .shelf-head{text-align:center;margin-bottom:54px}
   .shelf-head h2{font-family:"Cormorant Garamond",Georgia,serif;font-weight:300;
     font-size:clamp(30px,4.6vw,46px);letter-spacing:-.005em;margin-top:12px}
@@ -99,8 +106,8 @@
   .card .spec{font-size:12px;color:var(--soft-ink);letter-spacing:.02em;margin-bottom:9px;
     line-height:1.45;overflow-wrap:anywhere;
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-  .card .price{font-size:13px;letter-spacing:.09em;color:var(--forest);font-weight:400}
-  .card .out{align-self:center;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  .card .price{font-size:13px;letter-spacing:.09em;color:var(--forest);font-weight:400;margin-top:auto}
+  .card .out{align-self:center;margin-top:auto;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
     color:var(--walnut);background:var(--gold-wash);padding:3px 12px;border-radius:999px}
   .card .arch{border:1px solid var(--hair)}
   .card:hover .arch{border-color:var(--gold)}
@@ -121,7 +128,7 @@
     align-items:flex-start;justify-content:center;padding:46px 22px;overflow-y:auto}
   .ov.active{display:flex}
   .sheet{background:var(--paper);border-radius:14px;max-width:840px;width:100%;padding:30px}
-  .x{background:none;border:none;font-size:21px;line-height:1;color:var(--soft-ink);float:right}
+  .x{background:none;border:none;font-size:24px;line-height:1;color:var(--soft-ink);float:right;padding:2px 6px;margin:-2px -6px 0 0}
   .detail{display:grid;grid-template-columns:minmax(0,1fr);gap:28px}
   @media(min-width:680px){.detail{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:44px}}
   .detail .arch{aspect-ratio:4/5}
@@ -132,7 +139,7 @@
   .detail .price{font-size:15px;letter-spacing:.09em;color:var(--forest);margin-bottom:26px}
   .detail .desc{color:var(--soft-ink);font-size:14.5px;margin-bottom:26px;overflow-wrap:anywhere}
   .qty{display:flex;align-items:center;gap:18px;margin-bottom:24px}
-  .qty button{width:32px;height:32px;border-radius:50%;border:1px solid var(--hair);background:none;font-size:14px;color:var(--ink);transition:.2s}
+  .qty button{width:40px;height:40px;border-radius:50%;border:1px solid var(--hair);background:none;font-size:14px;color:var(--ink);transition:.2s}
   .qty button:hover{border-color:var(--forest);color:var(--forest)}
   .qty span{font-size:14px;min-width:16px;text-align:center}
   .btn{display:inline-block;background:var(--forest);color:var(--paper);border:1px solid var(--forest);
@@ -163,8 +170,8 @@
   .ci .nm{font-family:"Cormorant Garamond",Georgia,serif;font-size:19px;line-height:1.2;overflow-wrap:anywhere}
   .ci .pr{font-size:12.5px;letter-spacing:.07em;color:var(--forest);margin-top:2px}
   .ci .row{display:flex;align-items:center;gap:12px;margin-top:10px}
-  .ci .row button{width:24px;height:24px;border-radius:50%;border:1px solid var(--hair);background:none;font-size:12px}
-  .ci .rm{background:none;border:none;padding:0;margin-top:8px;font-size:10.5px;letter-spacing:.12em;
+  .ci .row button{width:32px;height:32px;border-radius:50%;border:1px solid var(--hair);background:none;font-size:12px}
+  .ci .rm{background:none;border:none;padding:4px 0;margin-top:6px;font-size:10.5px;letter-spacing:.12em;
     text-transform:uppercase;color:var(--soft-ink);border-bottom:1px solid var(--hair)}
   .dfoot{padding:22px 26px 30px;border-top:1px solid var(--hair)}
   .srow{display:flex;justify-content:space-between;gap:12px;font-size:13.5px;color:var(--soft-ink);margin-bottom:8px}
@@ -176,10 +183,12 @@
   .fld input,.fld textarea,.fld select{width:100%;max-width:100%;border:none;border-bottom:1px solid var(--hair);background:none;
     padding:9px 2px;font-family:inherit;font-size:15px;font-weight:300;color:var(--ink);border-radius:0}
   .fld textarea{resize:vertical;min-height:62px}
+  .fld input[type=file]{font-size:13px;padding-bottom:12px}
   .fld input:focus,.fld textarea:focus,.fld select:focus{outline:none;border-bottom-color:var(--forest)}
   .pay-note{border-left:1px solid var(--gold);padding:4px 0 4px 16px;margin:22px 0;
     font-size:13px;color:var(--soft-ink);overflow-wrap:anywhere}
-  .err{color:#A8452F;font-size:12.5px;margin-top:12px}
+  .err{color:#A8452F;font-size:12.5px;margin-top:12px;overflow-wrap:anywhere}
+  .err .why{display:block;font-size:11px;opacity:.75;margin-top:4px;line-height:1.5}
   .note{color:var(--walnut);background:var(--gold-wash);border-radius:10px;
     padding:11px 14px;font-size:12.5px;line-height:1.55;margin-top:14px}
   .done{text-align:center;padding:26px 0}
@@ -188,8 +197,10 @@
     .fld input,.fld textarea,.fld select{font-size:16px}
     .ov{padding:0;align-items:flex-start}
     .sheet{border-radius:0;min-height:100vh;min-height:100dvh;padding:22px 20px calc(34px + env(safe-area-inset-bottom))}
-    .hero{padding:52px 0 62px}
+    .hero{padding-top:52px;padding-bottom:62px}
     .band{margin-top:76px;padding:56px 0}
+    .shelf-head{margin-bottom:34px}
+    .grid{gap:30px 18px}
   }
   :focus-visible{outline:2px solid var(--forest);outline-offset:3px}
   @media(prefers-reduced-motion:reduce){*{transition:none!important}html{scroll-behavior:auto}}
@@ -212,7 +223,7 @@
     <p>Small crochet pieces — charms, keyrings and little everyday things, each one worked stitch by stitch and made to order.</p>
     <a class="link" href="#shop">See the pieces</a>
   </div>
-  <div class="arch hero-arch">
+  <div class="arch hero-arch" id="hero-arch">
     <img id="hero-img" src="" alt="Handmade crochet" style="display:none">
     <div id="hero-empty" class="hero-empty">Photos coming soon</div>
   </div>
@@ -268,7 +279,7 @@ const BAG_KEY = "hh_bag_v1";
 /* ---------- helpers ---------- */
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const money = n => (SETTINGS.currency || "PKR") + " " + Number(n).toLocaleString();
-const subtotal = () => BAG.reduce((s,i)=>s+i.price*i.quantity,0);
+const subtotal = () => BAG.reduce((s,i)=> s + (i.in_stock === false ? 0 : i.price*i.quantity), 0);
 const countBag = () => document.getElementById("bag-n").textContent = "(" + BAG.reduce((s,i)=>s+i.quantity,0) + ")";
 function imgUrl(path){ if(!path) return ""; return sb.storage.from("product-images").getPublicUrl(path).data.publicUrl; }
 function archOf(p, src){
@@ -276,6 +287,25 @@ function archOf(p, src){
   return `<div class="arch">${url ? `<img src="${url}" alt="${esc(p.name)}">` : ""}</div>`;
 }
 function loadBag(){ try{ BAG = JSON.parse(localStorage.getItem(BAG_KEY)) || []; }catch(e){ BAG = []; } }
+/* A bag lives in localStorage for days. Products get renamed, re-uploaded or
+   deleted in the meantime, and the saved product_id then points at nothing —
+   place_order rejects the whole order. Drop dead lines and re-read the rest
+   from the database so name, price and stock are never stale. */
+function reconcileBag(){
+  const before = JSON.stringify(BAG);
+  BAG = BAG.filter(i => PRODUCTS.some(p => p.id === i.product_id));
+  BAG.forEach(i => {
+    const p = PRODUCTS.find(x => x.id === i.product_id);
+    i.name = p.name;
+    i.price = Number(p.price);
+    i.image_url = p.image_path ? imgUrl(p.image_path) : "";
+    i.in_stock = p.in_stock;
+    i.quantity = Math.min(99, Math.max(1, Number(i.quantity) || 1));
+  });
+  if(JSON.stringify(BAG) !== before) saveBag();
+  countBag();
+}
+const bagBlocked = () => BAG.some(i => i.in_stock === false);
 function saveBag(){ try{ localStorage.setItem(BAG_KEY, JSON.stringify(BAG)); }catch(e){} countBag(); }
 /* ---------- image shrink (receipts from phone cameras are 3–8MB) ---------- */
 function loadBitmap(file){
@@ -332,19 +362,25 @@ async function loadAll(){
     document.getElementById("nav-logo").innerHTML = `<img src="${logoUrl}" alt="Hooked Heaven">`;
     document.getElementById("foot-logo").innerHTML = `<img src="${logoUrl}" alt="">`;
   }
-  // Hero photo: first product photo, falling back to the logo, falling back to an empty state
-  const firstWithPhoto = PRODUCTS.find(p => p.image_path);
+  // Hero: the shop logo, shown at its own size or smaller so it never pixelates
+  const heroArch = document.getElementById("hero-arch");
   const heroImg = document.getElementById("hero-img");
   const heroEmpty = document.getElementById("hero-empty");
-  const heroSrc = firstWithPhoto ? imgUrl(firstWithPhoto.image_path) : (SETTINGS.logo_path ? imgUrl(SETTINGS.logo_path) : "");
-  if(heroSrc){
-    heroImg.src = heroSrc;
+  if(SETTINGS.logo_path){
+    heroImg.onload = () => {
+      const natural = heroImg.naturalWidth || 0;
+      if(natural) heroArch.style.maxWidth = Math.min(240, natural) + "px";
+    };
+    heroImg.src = imgUrl(SETTINGS.logo_path);
+    heroImg.alt = SETTINGS.shop_name || "Hooked Heaven";
     heroImg.style.display = "";
+    heroArch.classList.add("logo-mode");
     heroEmpty.style.display = "none";
   }else{
     heroImg.style.display = "none";
     heroEmpty.style.display = "flex";
   }
+  reconcileBag();
   renderGrid();
 }
 /* ---------- shelf ---------- */
@@ -399,7 +435,9 @@ function addCurrent(){ addToBag(current, qty); closeProduct(); openBag(); }
 function addToBag(p,n){
   const ex = BAG.find(i=>i.product_id===p.id);
   if(ex) ex.quantity = Math.min(99, ex.quantity + n);
-  else BAG.push({ product_id:p.id, name:p.name, price:p.price, image_url: p.image_path ? imgUrl(p.image_path) : "", quantity:n });
+  else BAG.push({ product_id:p.id, name:p.name, price:Number(p.price),
+                  image_url: p.image_path ? imgUrl(p.image_path) : "",
+                  in_stock:p.in_stock, quantity:n });
   saveBag(); drawBag();
 }
 function bagStep(id,d){
@@ -420,7 +458,7 @@ function drawBag(){
       <div class="thumb">${i.image_url ? `<img src="${i.image_url}" alt="${esc(i.name)}">` : ""}</div>
       <div style="flex:1;min-width:0">
         <div class="nm">${esc(i.name)}</div>
-        <div class="pr">${money(i.price)}</div>
+        <div class="pr">${i.in_stock === false ? "Currently unavailable" : money(i.price)}</div>
         <div class="row">
           <button onclick="bagStep('${i.product_id}',-1)">&minus;</button>
           <span style="font-size:13px">${i.quantity}</span>
@@ -432,7 +470,9 @@ function drawBag(){
   foot.innerHTML = `
     <div class="srow"><span>Subtotal</span><span>${money(subtotal())}</span></div>
     <div class="srow" style="font-size:12px">Delivery calculated at checkout</div>
-    <button class="btn wide" onclick="startCheckout()">Checkout</button>`;
+    ${bagBlocked() ? `<div class="note" style="margin-top:0;margin-bottom:14px">One of these isn't
+        available right now — please remove it to continue.</div>` : ""}
+    <button class="btn wide" onclick="startCheckout()" ${bagBlocked() ? "disabled" : ""}>Checkout</button>`;
 }
 function openBag(){
   drawBag();
@@ -445,7 +485,7 @@ function closeBag(){
 }
 /* ---------- checkout ---------- */
 function startCheckout(){
-  if(!BAG.length) return;
+  if(!BAG.length || bagBlocked()) return;
   closeBag(); drawCheckout();
   document.getElementById("cov").classList.add("active");
   document.body.style.overflow = "hidden";
@@ -530,6 +570,7 @@ async function submitOrder(){
       p_items: BAG.map(i => ({ product_id: i.product_id, quantity: i.quantity }))
     });
     if(error) throw error;
+    if(!orderNumber) throw new Error("the server did not return an order number");
     // Order is already saved. The receipt is a best-effort extra — if it fails
     // we must TELL the customer, otherwise the shop owner has no proof of payment.
     let receiptOk = null;
@@ -553,7 +594,15 @@ async function submitOrder(){
     showDone(orderNumber, receiptOk);
   }catch(e){
     console.error(e);
-    err.textContent = "Something went wrong placing your order. Please try again, or message us on Instagram.";
+    const raw = String(e.message || e.error || "");
+    const known = /no longer exists|unavailable|out of stock|delivery area|quantity/i.test(raw);
+    const lead = known
+      ? raw + " Please reopen your bag — it has been refreshed."
+      : "Something went wrong placing your order. Please try again, or message us on Instagram.";
+    if(known){ await loadAll(); }
+    const why = [e.code, e.status || e.statusCode, raw, e.details, e.hint]
+      .filter(Boolean).join(" · ").slice(0,240);
+    err.innerHTML = esc(lead) + (why ? '<span class="why">' + esc(why) + '</span>' : "");
     err.style.display = "block";
     go.disabled = false; go.textContent = "Place order";
   }
