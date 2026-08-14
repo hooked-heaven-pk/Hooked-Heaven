@@ -25,8 +25,6 @@
   --gold-wash:rgba(178,160,100,.13);
   --sage-wash:#E4EBE4;
   }
-
-
   .doodle{
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cg fill='none' stroke='%23B2A064' stroke-opacity='.20' stroke-width='1.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M30 44c-4-7 4-13 8-8 4-5 12 1 8 8-2 5-8 9-8 9s-6-4-8-9z'/%3E%3Ccircle cx='120' cy='36' r='13'/%3E%3Cpath d='M108 33c6 3 18 3 24 0M110 42c7-2 15-2 22 0'/%3E%3Cpath d='M196 26l18 18M214 26l-18 18'/%3E%3Cpath d='M60 108c0-9 7-16 16-16s16 7 16 16-7 16-16 16-16-7-16-16z'/%3E%3Cpath d='M62 102c9 4 21 4 30 0'/%3E%3Cpath d='M150 96l26 26M150 122l26-26'/%3E%3Cpath d='M20 150c8-6 18-6 26 0s18 6 26 0'/%3E%3Cpath d='M118 158c-4-7 4-13 8-8 4-5 12 1 8 8-2 5-8 9-8 9s-6-4-8-9z'/%3E%3Ccircle cx='200' cy='160' r='12'/%3E%3Cpath d='M189 156c7 3 15 3 22 0M191 165c6-2 13-2 18 0'/%3E%3Cpath d='M40 200c8-6 18-6 26 0s18 6 26 0'/%3E%3Cpath d='M148 196l16 16M164 196l-16 16'/%3E%3Cpath d='M206 206c-4-7 4-13 8-8 4-5 12 1 8 8-2 5-8 9-8 9s-6-4-8-9z'/%3E%3C/g%3E%3C/svg%3E");
     background-repeat:repeat;
@@ -41,14 +39,12 @@
   button{font-family:inherit;cursor:pointer}
   .wrap{max-width:1140px;margin:0 auto;padding:0 32px}
   @media(max-width:640px){.wrap{padding:0 20px}}
-
   .label{font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;font-weight:500;color:var(--walnut)}
   .label::before{content:"";display:inline-block;width:16px;height:1px;background:var(--gold);
     vertical-align:middle;margin-right:9px;margin-bottom:2px}
   .shelf-head .label::after,.band .label::after{content:"";display:inline-block;width:16px;height:1px;
     background:var(--gold);vertical-align:middle;margin-left:9px;margin-bottom:2px}
   .serif{font-family:"Cormorant Garamond",Georgia,serif;font-weight:300}
-
   /* ---------- nav ---------- */
   .nav{position:sticky;top:0;z-index:40;background:rgba(250,248,242,.93);backdrop-filter:blur(12px);
     border-bottom:1px solid var(--gold-soft)}
@@ -63,19 +59,16 @@
     font-weight:500;color:var(--ink);border-bottom:1px solid transparent;transition:border-color .25s}
   .bag:hover{border-color:var(--gold)}
   .bag .n{color:var(--soft-ink)}
-
   /* ---------- hero ---------- */
-  .hero{display:grid;grid-template-columns:1fr;gap:44px;padding:74px 0 84px;align-items:center}
-  @media(min-width:900px){.hero{grid-template-columns:1fr 1fr;gap:76px;padding:96px 0 104px}}
+  .hero{display:grid;grid-template-columns:minmax(0,1fr);gap:44px;padding:74px 0 84px;align-items:center}
+  @media(min-width:900px){.hero{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:76px;padding:96px 0 104px}}
   .hero h1{font-family:"Cormorant Garamond",Georgia,serif;font-weight:300;
     font-size:clamp(42px,6.6vw,72px);line-height:1.08;letter-spacing:-.005em;margin:18px 0 22px}
   .hero h1 em{font-style:italic;color:var(--forest)}
   .hero p{color:var(--soft-ink);font-size:16px;max-width:38ch;margin-bottom:34px}
-
   .link{display:inline-block;font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:500;
     text-decoration:none;padding-bottom:7px;border-bottom:1px solid var(--ink);transition:.25s;background:none;border-left:none;border-top:none;border-right:none}
   .link:hover{color:var(--forest);border-color:var(--forest)}
-
   /* ---------- the arch: signature element ---------- */
   .arch{position:relative;border-radius:999px 999px 10px 10px;overflow:hidden;background:var(--mist)}
   .arch img{width:100%;height:100%;object-fit:cover;transition:transform 1.1s cubic-bezier(.2,.7,.2,1)}
@@ -86,7 +79,6 @@
     border:1px solid var(--gold-soft);opacity:.6;pointer-events:none;z-index:1}
   .hero-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft-ink)}
-
   /* ---------- shelf ---------- */
   .shelf{padding:20px 0 10px}
   .shelf-head{text-align:center;margin-bottom:54px}
@@ -95,20 +87,23 @@
   .rule{width:76px;height:1px;background:var(--gold);margin:22px auto 0;position:relative}
   .rule::after{content:"";position:absolute;left:50%;top:-3px;width:7px;height:7px;
     margin-left:-3.5px;background:var(--gold);border-radius:50%}
-
-  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:38px 22px}
-  @media(min-width:820px){.grid{grid-template-columns:repeat(3,1fr);gap:64px 40px}}
-  .card{background:none;border:none;padding:0;text-align:center;display:flex;flex-direction:column}
-  .card .arch{aspect-ratio:4/5;margin-bottom:20px}
+  /* minmax(0,1fr): a long unbroken word must not stretch the column */
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:38px 22px}
+  @media(min-width:820px){.grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:64px 40px}}
+  .card{background:none;border:none;padding:0;text-align:center;display:flex;flex-direction:column;min-width:0}
+  .card .arch{aspect-ratio:4/5;margin-bottom:20px;flex:0 0 auto;width:100%}
   .card:hover .arch img{transform:scale(1.045)}
-  .card .name{font-family:"Cormorant Garamond",Georgia,serif;font-size:22px;font-weight:400;line-height:1.25;margin-bottom:3px}
-  .card .spec{font-size:12px;color:var(--soft-ink);letter-spacing:.02em;margin-bottom:9px}
+  .card .name{font-family:"Cormorant Garamond",Georgia,serif;font-size:22px;font-weight:400;line-height:1.25;
+    margin-bottom:3px;overflow-wrap:anywhere;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .card .spec{font-size:12px;color:var(--soft-ink);letter-spacing:.02em;margin-bottom:9px;
+    line-height:1.45;overflow-wrap:anywhere;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .card .price{font-size:13px;letter-spacing:.09em;color:var(--forest);font-weight:400}
   .card .out{align-self:center;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
     color:var(--walnut);background:var(--gold-wash);padding:3px 12px;border-radius:999px}
   .card .arch{border:1px solid var(--hair)}
   .card:hover .arch{border-color:var(--gold)}
-
   /* ---------- note band ---------- */
   .band{margin:104px 0 0;padding:74px 0;background:var(--sage-wash);
     border-top:1px solid var(--gold-soft);border-bottom:1px solid var(--gold-soft);text-align:center}
@@ -116,35 +111,30 @@
   .band p{color:var(--soft-ink);max-width:46ch;margin:0 auto 28px;font-size:15.5px}
   .band .link{border-bottom-color:var(--forest);color:var(--forest)}
   .band .link:hover{color:var(--walnut);border-color:var(--walnut)}
-
   footer{padding:52px 0 70px;text-align:center;border-top:1px solid var(--gold-soft)}
   .mark-logo{border:1px solid var(--gold-soft)}
   footer .mark{justify-content:center;margin-bottom:14px}
   footer .fine{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft-ink);line-height:2.2}
-
   .state{text-align:center;padding:56px 20px;color:var(--soft-ink);font-size:13px;letter-spacing:.06em;grid-column:1/-1}
-
   /* ---------- overlays ---------- */
   .ov{position:fixed;inset:0;background:rgba(53,48,42,.34);z-index:100;display:none;
     align-items:flex-start;justify-content:center;padding:46px 22px;overflow-y:auto}
   .ov.active{display:flex}
   .sheet{background:var(--paper);border-radius:14px;max-width:840px;width:100%;padding:30px}
   .x{background:none;border:none;font-size:21px;line-height:1;color:var(--soft-ink);float:right}
-
-  .detail{display:grid;grid-template-columns:1fr;gap:28px}
-  @media(min-width:680px){.detail{grid-template-columns:1fr 1fr;gap:44px}}
+  .detail{display:grid;grid-template-columns:minmax(0,1fr);gap:28px}
+  @media(min-width:680px){.detail{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:44px}}
   .detail .arch{aspect-ratio:4/5}
-  .detail .body{display:flex;flex-direction:column;justify-content:center;padding:6px 0}
-  .detail h3{font-family:"Cormorant Garamond",Georgia,serif;font-weight:300;font-size:34px;line-height:1.15;margin-bottom:6px}
-  .detail .spec{color:var(--soft-ink);font-size:13.5px;margin-bottom:18px}
+  .detail .body{display:flex;flex-direction:column;justify-content:center;padding:6px 0;min-width:0}
+  .detail h3{font-family:"Cormorant Garamond",Georgia,serif;font-weight:300;font-size:34px;line-height:1.15;
+    margin-bottom:6px;overflow-wrap:anywhere}
+  .detail .spec{color:var(--soft-ink);font-size:13.5px;margin-bottom:18px;overflow-wrap:anywhere}
   .detail .price{font-size:15px;letter-spacing:.09em;color:var(--forest);margin-bottom:26px}
-  .detail .desc{color:var(--soft-ink);font-size:14.5px;margin-bottom:26px}
-
+  .detail .desc{color:var(--soft-ink);font-size:14.5px;margin-bottom:26px;overflow-wrap:anywhere}
   .qty{display:flex;align-items:center;gap:18px;margin-bottom:24px}
   .qty button{width:32px;height:32px;border-radius:50%;border:1px solid var(--hair);background:none;font-size:14px;color:var(--ink);transition:.2s}
   .qty button:hover{border-color:var(--forest);color:var(--forest)}
   .qty span{font-size:14px;min-width:16px;text-align:center}
-
   .btn{display:inline-block;background:var(--forest);color:var(--paper);border:1px solid var(--forest);
     border-radius:999px;padding:14px 32px;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
     font-weight:500;text-decoration:none;text-align:center;transition:.25s}
@@ -153,48 +143,51 @@
   .btn.ghost:hover{border-color:var(--ink);background:none}
   .btn:disabled{opacity:.4;cursor:not-allowed}
   .btn.wide{width:100%}
-
   /* ---------- bag ---------- */
   .dov{position:fixed;inset:0;background:rgba(53,48,42,.3);z-index:110;display:none}
   .dov.active{display:block}
+  /* visibility:hidden while closed — a fixed panel is NOT clipped by body overflow-x,
+     which made the whole page scroll sideways on iOS Safari */
   .drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,100%);background:var(--paper);z-index:111;
-    border-left:1px solid var(--hair);transform:translateX(100%);transition:transform .42s cubic-bezier(.2,.7,.2,1);
+    border-left:1px solid var(--hair);transform:translateX(100%);visibility:hidden;
+    transition:transform .42s cubic-bezier(.2,.7,.2,1),visibility 0s linear .42s;
     display:flex;flex-direction:column}
-  .drawer.active{transform:translateX(0)}
+  .drawer.active{transform:translateX(0);visibility:visible;
+    transition:transform .42s cubic-bezier(.2,.7,.2,1),visibility 0s}
   .dhead{padding:24px 26px;border-bottom:1px solid var(--hair);display:flex;align-items:center;justify-content:space-between}
   .dhead h3{font-family:"Cormorant Garamond",Georgia,serif;font-weight:300;font-size:24px}
   .ditems{flex:1;overflow-y:auto;padding:8px 26px}
   .ci{display:flex;gap:16px;padding:20px 0;border-bottom:1px solid var(--hair)}
   .ci .thumb{width:64px;height:80px;flex:0 0 64px;border-radius:999px 999px 6px 6px;overflow:hidden;background:var(--mist)}
   .ci .thumb img{width:100%;height:100%;object-fit:cover}
-  .ci .nm{font-family:"Cormorant Garamond",Georgia,serif;font-size:19px;line-height:1.2}
+  .ci .nm{font-family:"Cormorant Garamond",Georgia,serif;font-size:19px;line-height:1.2;overflow-wrap:anywhere}
   .ci .pr{font-size:12.5px;letter-spacing:.07em;color:var(--forest);margin-top:2px}
   .ci .row{display:flex;align-items:center;gap:12px;margin-top:10px}
   .ci .row button{width:24px;height:24px;border-radius:50%;border:1px solid var(--hair);background:none;font-size:12px}
   .ci .rm{background:none;border:none;padding:0;margin-top:8px;font-size:10.5px;letter-spacing:.12em;
     text-transform:uppercase;color:var(--soft-ink);border-bottom:1px solid var(--hair)}
   .dfoot{padding:22px 26px 30px;border-top:1px solid var(--hair)}
-  .srow{display:flex;justify-content:space-between;font-size:13.5px;color:var(--soft-ink);margin-bottom:8px}
+  .srow{display:flex;justify-content:space-between;gap:12px;font-size:13.5px;color:var(--soft-ink);margin-bottom:8px}
   .srow.total{font-family:"Cormorant Garamond",Georgia,serif;font-size:21px;color:var(--ink);margin:14px 0 18px}
-
   /* ---------- forms ---------- */
   .fld{margin-bottom:18px}
   .fld label{display:block;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
     font-weight:500;color:var(--soft-ink);margin-bottom:8px}
-  .fld input,.fld textarea,.fld select{width:100%;border:none;border-bottom:1px solid var(--hair);background:none;
+  .fld input,.fld textarea,.fld select{width:100%;max-width:100%;border:none;border-bottom:1px solid var(--hair);background:none;
     padding:9px 2px;font-family:inherit;font-size:15px;font-weight:300;color:var(--ink);border-radius:0}
   .fld textarea{resize:vertical;min-height:62px}
   .fld input:focus,.fld textarea:focus,.fld select:focus{outline:none;border-bottom-color:var(--forest)}
   .pay-note{border-left:1px solid var(--gold);padding:4px 0 4px 16px;margin:22px 0;
-    font-size:13px;color:var(--soft-ink)}
+    font-size:13px;color:var(--soft-ink);overflow-wrap:anywhere}
   .err{color:#A8452F;font-size:12.5px;margin-top:12px}
+  .note{color:var(--walnut);background:var(--gold-wash);border-radius:10px;
+    padding:11px 14px;font-size:12.5px;line-height:1.55;margin-top:14px}
   .done{text-align:center;padding:26px 0}
   .done .ordno{font-family:"Cormorant Garamond",Georgia,serif;font-size:26px;color:var(--forest);margin:16px 0}
-
   @media(max-width:640px){
     .fld input,.fld textarea,.fld select{font-size:16px}
     .ov{padding:0;align-items:flex-start}
-    .sheet{border-radius:0;min-height:100vh;padding:22px 20px calc(34px + env(safe-area-inset-bottom))}
+    .sheet{border-radius:0;min-height:100vh;min-height:100dvh;padding:22px 20px calc(34px + env(safe-area-inset-bottom))}
     .hero{padding:52px 0 62px}
     .band{margin-top:76px;padding:56px 0}
   }
@@ -203,7 +196,6 @@
 </style>
 </head>
 <body>
-
 <nav class="nav">
   <div class="in">
     <button class="mark" onclick="window.scrollTo({top:0,behavior:'smooth'})">
@@ -213,7 +205,6 @@
     <button class="bag" onclick="openBag()">Bag <span class="n" id="bag-n">(0)</span></button>
   </div>
 </nav>
-
 <header class="wrap hero doodle">
   <div>
     <div class="label">Handmade in Pakistan</div>
@@ -226,7 +217,6 @@
     <div id="hero-empty" class="hero-empty">Photos coming soon</div>
   </div>
 </header>
-
 <section class="wrap shelf" id="shop">
   <div class="shelf-head">
     <div class="label">The collection</div>
@@ -235,7 +225,6 @@
   </div>
   <div class="grid" id="grid"><div class="state">Loading…</div></div>
 </section>
-
 <section class="band">
   <div class="wrap">
     <div class="label">Something of your own</div>
@@ -244,7 +233,6 @@
     <a class="link" id="ig-link" href="#" target="_blank" rel="noopener">Message on Instagram</a>
   </div>
 </section>
-
 <footer class="doodle">
   <div class="wrap">
     <div class="mark">
@@ -257,9 +245,7 @@
     </div>
   </div>
 </footer>
-
 <div class="ov" id="pov"><div class="sheet" id="psheet"></div></div>
-
 <div class="dov" id="dov" onclick="closeBag()"></div>
 <aside class="drawer" id="drawer">
   <div class="dhead">
@@ -269,20 +255,16 @@
   <div class="ditems" id="ditems"></div>
   <div class="dfoot" id="dfoot"></div>
 </aside>
-
 <div class="ov" id="cov"><div class="sheet" id="csheet" style="max-width:520px"></div></div>
-
 <script>
 /* ============================================================
-   CONFIG — fill these in once the Supabase project exists
+   CONFIG
    ============================================================ */
 const SUPABASE_URL = "https://tztpscrdaryzgqzkxtgj.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_ZaUk5SrrJkRrcWnvCXClnQ_ErsmhGC8";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
 let PRODUCTS = [], ZONES = [], SETTINGS = {}, BAG = [];
 const BAG_KEY = "hh_bag_v1";
-
 /* ---------- helpers ---------- */
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const money = n => (SETTINGS.currency || "PKR") + " " + Number(n).toLocaleString();
@@ -295,7 +277,34 @@ function archOf(p, src){
 }
 function loadBag(){ try{ BAG = JSON.parse(localStorage.getItem(BAG_KEY)) || []; }catch(e){ BAG = []; } }
 function saveBag(){ try{ localStorage.setItem(BAG_KEY, JSON.stringify(BAG)); }catch(e){} countBag(); }
-
+/* ---------- image shrink (receipts from phone cameras are 3–8MB) ---------- */
+function loadBitmap(file){
+  return new Promise((resolve,reject)=>{
+    const fallback=()=>{
+      const img=new Image(), url=URL.createObjectURL(file);
+      img.onload=()=>{ URL.revokeObjectURL(url); resolve(img); };
+      img.onerror=()=>{ URL.revokeObjectURL(url); reject(new Error("decode failed")); };
+      img.src=url;
+    };
+    if(typeof createImageBitmap==="function") createImageBitmap(file).then(resolve).catch(fallback);
+    else fallback();
+  });
+}
+async function shrinkImage(file, maxPx=1600, quality=0.82){
+  if(!file || !/^image\//.test(file.type||"")) return file;   // PDFs pass through untouched
+  if(file.size < 400*1024) return file;
+  try{
+    const src = await loadBitmap(file);
+    const sw = src.width || src.naturalWidth, sh = src.height || src.naturalHeight;
+    if(!sw || !sh) return file;
+    const k = Math.min(1, maxPx/Math.max(sw,sh));
+    const c = document.createElement("canvas");
+    c.width = Math.round(sw*k); c.height = Math.round(sh*k);
+    c.getContext("2d").drawImage(src,0,0,c.width,c.height);
+    const blob = await new Promise(r=>c.toBlob(r,"image/jpeg",quality));
+    return (blob && blob.size < file.size) ? blob : file;
+  }catch(e){ console.warn("resize skipped:",e); return file; }
+}
 /* ============================================================
    LOAD
    ============================================================ */
@@ -305,30 +314,25 @@ async function loadAll(){
     sb.from("shipping_zones").select("*").eq("is_active", true).order("sort_order"),
     sb.from("shop_settings").select("*")
   ]);
-
   if(prods.error){
     document.getElementById("grid").innerHTML = '<div class="state">Could not load the shop right now. Please refresh.</div>';
     console.error(prods.error);
     return;
   }
-
   PRODUCTS = prods.data || [];
   ZONES = zones.data || [];
   SETTINGS = {};
   (setts.data || []).forEach(s => SETTINGS[s.key] = s.value);
-
   document.title = SETTINGS.shop_name || "Hooked Heaven";
   const ig = (SETTINGS.instagram_handle || "").replace("@","");
   document.getElementById("ig-link").href = ig ? `https://instagram.com/${ig}` : "#";
-
   // Logo: shown in nav + footer once uploaded via the dashboard
   if(SETTINGS.logo_path){
     const logoUrl = imgUrl(SETTINGS.logo_path);
     document.getElementById("nav-logo").innerHTML = `<img src="${logoUrl}" alt="Hooked Heaven">`;
     document.getElementById("foot-logo").innerHTML = `<img src="${logoUrl}" alt="">`;
   }
-
-  // Hero photo: first in-stock product photo, falling back to the logo, falling back to an empty state
+  // Hero photo: first product photo, falling back to the logo, falling back to an empty state
   const firstWithPhoto = PRODUCTS.find(p => p.image_path);
   const heroImg = document.getElementById("hero-img");
   const heroEmpty = document.getElementById("hero-empty");
@@ -341,10 +345,8 @@ async function loadAll(){
     heroImg.style.display = "none";
     heroEmpty.style.display = "flex";
   }
-
   renderGrid();
 }
-
 /* ---------- shelf ---------- */
 function renderGrid(){
   if(PRODUCTS.length === 0){
@@ -360,7 +362,6 @@ function renderGrid(){
                    : `<span class="out">Currently unavailable</span>`}
     </button>`).join("");
 }
-
 /* ---------- product ---------- */
 let current = null, qty = 1;
 function openProduct(id){
@@ -394,7 +395,6 @@ function drawProduct(){
 }
 function step(d){ qty = Math.min(99, Math.max(1, qty+d)); document.getElementById("q").textContent = qty; }
 function addCurrent(){ addToBag(current, qty); closeProduct(); openBag(); }
-
 /* ---------- bag ---------- */
 function addToBag(p,n){
   const ex = BAG.find(i=>i.product_id===p.id);
@@ -418,7 +418,7 @@ function drawBag(){
   items.innerHTML = BAG.map(i => `
     <div class="ci">
       <div class="thumb">${i.image_url ? `<img src="${i.image_url}" alt="${esc(i.name)}">` : ""}</div>
-      <div style="flex:1">
+      <div style="flex:1;min-width:0">
         <div class="nm">${esc(i.name)}</div>
         <div class="pr">${money(i.price)}</div>
         <div class="row">
@@ -443,7 +443,6 @@ function closeBag(){
   document.getElementById("dov").classList.remove("active");
   document.getElementById("drawer").classList.remove("active");
 }
-
 /* ---------- checkout ---------- */
 function startCheckout(){
   if(!BAG.length) return;
@@ -457,7 +456,6 @@ function closeCheckout(){
 }
 function drawCheckout(){
   const zoneOpts = ZONES.map(z => `<option value="${z.id}">${esc(z.name)} — ${money(z.fee)}</option>`).join("");
-
   document.getElementById("csheet").innerHTML = `
     <button class="x" onclick="closeCheckout()">&times;</button>
     <h3 class="serif" style="font-size:30px;margin-bottom:22px">Checkout</h3>
@@ -470,12 +468,9 @@ function drawCheckout(){
       </select></div>
     <div class="fld"><label>City / town</label><input id="k-city" placeholder="e.g. Lahore"></div>
     <div class="fld"><label>Address</label><textarea id="k-addr" placeholder="House, street, area, landmark"></textarea></div>
-
     <div class="pay-note" id="pay-note">Loading payment details…</div>
-
     <div class="fld"><label>Payment receipt (optional now, can send on Instagram)</label>
       <input id="k-receipt" type="file" accept="image/*,application/pdf"></div>
-
     <div style="border-top:1px solid var(--hair);padding-top:18px;margin-top:6px">
       <div class="srow"><span>Subtotal</span><span>${money(subtotal())}</span></div>
       <div class="srow"><span>Delivery</span><span id="k-ship">—</span></div>
@@ -483,13 +478,11 @@ function drawCheckout(){
     </div>
     <button class="btn wide" id="k-go" onclick="submitOrder()">Place order</button>
     <div class="err" id="k-err" style="display:none"></div>`;
-
   const method = SETTINGS.payment_method || "EasyPaisa";
   const acctNum = SETTINGS.payment_account_number || "";
   const acctName = SETTINGS.payment_account_name || "";
   document.getElementById("pay-note").innerHTML =
     `Please send payment via <strong>${esc(method)}</strong>${acctNum ? ` to <strong>${esc(acctNum)}</strong>` : ""}${acctName ? ` (${esc(acctName)})` : ""}, then upload your receipt below.`;
-
   if(ZONES.length === 0){
     const err = document.getElementById("k-err");
     err.textContent = "Delivery areas aren't set up yet — please message us on Instagram to order.";
@@ -507,7 +500,6 @@ function totals(){
   document.getElementById("k-ship").textContent = z ? money(fee) : "—";
   document.getElementById("k-total").textContent = money(subtotal() + fee);
 }
-
 async function submitOrder(){
   const name = document.getElementById("k-name").value.trim();
   const phone = document.getElementById("k-phone").value.trim();
@@ -516,7 +508,6 @@ async function submitOrder(){
   const zone = selectedZone();
   const file = document.getElementById("k-receipt").files[0];
   const err = document.getElementById("k-err"), go = document.getElementById("k-go");
-
   err.style.display = "none";
   if(!name || !phone || !address){
     err.textContent = "Please fill in your name, phone and address.";
@@ -528,7 +519,6 @@ async function submitOrder(){
     err.style.display = "block";
     return;
   }
-
   go.disabled = true; go.textContent = "Placing order…";
   try{
     const { data: orderNumber, error } = await sb.rpc("place_order", {
@@ -540,18 +530,27 @@ async function submitOrder(){
       p_items: BAG.map(i => ({ product_id: i.product_id, quantity: i.quantity }))
     });
     if(error) throw error;
-
+    // Order is already saved. The receipt is a best-effort extra — if it fails
+    // we must TELL the customer, otherwise the shop owner has no proof of payment.
+    let receiptOk = null;
     if(file){
+      receiptOk = false;
+      go.textContent = "Uploading receipt…";
       try{
-        const ext = file.name.split(".").pop();
+        const blob = await shrinkImage(file);
+        const ext = (blob.type === "image/jpeg") ? "jpg"
+                  : (((file.name||"").split(".").pop() || "jpg").toLowerCase());
         const path = `${orderNumber}/${Date.now()}.${ext}`;
-        const up = await sb.storage.from("payment-receipts").upload(path, file);
-        if(!up.error) await sb.rpc("attach_receipt", { p_order_number: orderNumber, p_receipt_path: path });
+        const up = await sb.storage.from("payment-receipts")
+          .upload(path, blob, { contentType: blob.type || "image/jpeg" });
+        if(up.error) throw up.error;
+        const at = await sb.rpc("attach_receipt", { p_order_number: orderNumber, p_receipt_path: up.data.path });
+        if(at.error) throw at.error;
+        receiptOk = true;
       }catch(e){ console.error("Receipt upload failed", e); }
     }
-
     BAG = []; saveBag();
-    showDone(orderNumber);
+    showDone(orderNumber, receiptOk);
   }catch(e){
     console.error(e);
     err.textContent = "Something went wrong placing your order. Please try again, or message us on Instagram.";
@@ -559,8 +558,10 @@ async function submitOrder(){
     go.disabled = false; go.textContent = "Place order";
   }
 }
-
-function showDone(orderNumber){
+function showDone(orderNumber, receiptOk){
+  const warn = (receiptOk === false)
+    ? `<div class="note" style="text-align:left">Your order is saved, but the receipt didn't upload.
+         Please send the screenshot to us on Instagram with your order number.</div>` : "";
   document.getElementById("csheet").innerHTML = `
     <div class="done">
       <div class="rule" style="margin-bottom:22px"></div>
@@ -568,13 +569,12 @@ function showDone(orderNumber){
       <p style="color:var(--soft-ink);font-size:14.5px">Thank you — I'll message you to confirm.</p>
       <div class="ordno">${esc(orderNumber)}</div>
       <p style="color:var(--soft-ink);font-size:12.5px">Please keep this number for reference.</p>
+      ${warn}
       <button class="btn ghost" style="margin-top:22px" onclick="closeCheckout(); window.scrollTo({top:0,behavior:'smooth'})">Back to the shop</button>
     </div>`;
 }
-
 document.getElementById("pov").addEventListener("click", e=>{ if(e.target.id==="pov") closeProduct(); });
 document.getElementById("cov").addEventListener("click", e=>{ if(e.target.id==="cov") closeCheckout(); });
-
 /* ---------- init ---------- */
 loadBag(); countBag(); loadAll();
 </script>
