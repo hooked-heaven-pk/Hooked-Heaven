@@ -86,7 +86,105 @@
   .hero-arch.logo-mode img{width:100%;height:100%;object-fit:contain;padding:12px;transition:none}
   .hero-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft-ink)}
-  /* ---------- shelf ---------- */
+  /* ============================================================
+   ROUTING  —  #/            home (all products)
+               #/c/{slug}    one category
+               #/p/{slug}    an info page (About / Returns / Contact)
+   ============================================================ */
+let currentRoute = { kind:"home", slug:null };
+function parseHash(){
+  const h = (location.hash || "").replace(/^#/, "");
+  const mc = h.match(/^\/c\/(.+)$/);
+  if(mc) return { kind:"category", slug: decodeURIComponent(mc[1]) };
+  const mp = h.match(/^\/p\/(.+)$/);
+  if(mp) return { kind:"page", slug: decodeURIComponent(mp[1]) };
+  return { kind:"home", slug:null };
+}
+function goHome(){
+  if(location.hash && location.hash !== "#/") location.hash = "#/";
+  else { window.scrollTo({top:0,behavior:"smooth"}); }
+}
+function route(){
+  currentRoute = parseHash();
+  closeMenu();
+  const home = document.getElementById("view-home");
+  const page = document.getElementById("view-page");
+  const band = document.getElementById("band");
+
+  if(currentRoute.kind === "page"){
+    const pg = PAGES.find(p => p.slug === currentRoute.slug);
+    home.style.display = "none";
+    band.style.display = "none";
+    page.style.display = "";
+    page.innerHTML = pg
+      ? `<a class="back" href="#/">&larr; Back to the shop</a>
+         <h1>${esc(pg.title)}</h1>
+         <div class="body">${(pg.body||"").split(/\n\s*\n/).filter(Boolean)
+             .map(par => `<p>${esc(par).replace(/\n/g,"<br>")}</p>`).join("")}</div>`
+      : `<a class="back" href="#/">&larr; Back to the shop</a>
+         <h1>Page not found</h1>
+         <div class="body"><p>This page isn't available right now.</p></div>`;
+    window.scrollTo({top:0});
+    renderMenu();
+    return;
+  }
+
+  // home and category both show the product grid
+  page.style.display = "none";
+  page.innerHTML = "";
+  home.style.display = "";
+  band.style.display = "";
+  clearSearchSilently();
+  renderShelfHead();
+  renderGrid();
+  window.scrollTo({top:0});
+  renderMenu();
+}
+function renderShelfHead(){
+  const head = document.getElementById("shelf-head");
+  if(currentRoute.kind === "category"){
+    const c = CATEGORIES.find(x => x.slug === currentRoute.slug);
+    head.innerHTML = c
+      ? `<a class="back" href="#/">&larr; All products</a>
+         <h2>${esc(c.name)}</h2>
+         ${c.tagline ? `<div class="tag">${esc(c.tagline)}</div>` : ""}
+         <div class="rule"></div>`
+      : `<a class="back" href="#/">&larr; All products</a>
+         <h2>Category not found</h2><div class="rule"></div>`;
+    head.className = "cat-head";
+  }else{
+    head.innerHTML = `<div class="label">The collection</div>
+      <h2>Every piece, made to order</h2>
+      <div class="rule"></div>`;
+    head.className = "shelf-head";
+  }
+}
+/* ---------- menu ---------- */
+function renderMenu(){
+  const catLinks = CATEGORIES.map(c => {
+    const on = currentRoute.kind==="category" && currentRoute.slug===c.slug;
+    return `<a href="#/c/${encodeURIComponent(c.slug)}" class="${on?"on":""}">${esc(c.name)}</a>`;
+  }).join("");
+  const pageLinks = PAGES.map(p => {
+    const on = currentRoute.kind==="page" && currentRoute.slug===p.slug;
+    return `<a href="#/p/${encodeURIComponent(p.slug)}" class="${on?"on":""}">${esc(p.title)}</a>`;
+  }).join("");
+  document.getElementById("mnav").innerHTML = `
+    <a href="#/" class="${currentRoute.kind==="home"?"on":""}">Home</a>
+    ${catLinks ? `<div class="grp">Shop</div>${catLinks}` : ""}
+    <a href="#/" class="${currentRoute.kind==="home"?"on":""}">All Products</a>
+    ${pageLinks ? `<div class="grp">Information</div>${pageLinks}` : ""}`;
+}
+function openMenu(){
+  document.getElementById("mov").classList.add("active");
+  document.getElementById("mdrawer").classList.add("active");
+}
+function closeMenu(){
+  document.getElementById("mov").classList.remove("active");
+  document.getElementById("mdrawer").classList.remove("active");
+}
+window.addEventListener("hashchange", route);
+/* ---------- shelf ---------- */
   .shelf{padding-top:20px;padding-bottom:10px}
   .shelf-head{text-align:center;margin-bottom:54px}
   .shelf-head h2{font-family:"Cormorant Garamond",Georgia,serif;font-weight:300;
@@ -94,6 +192,41 @@
   .rule{width:76px;height:1px;background:var(--gold);margin:22px auto 0;position:relative}
   .rule::after{content:"";position:absolute;left:50%;top:-3px;width:7px;height:7px;
     margin-left:-3.5px;background:var(--gold);border-radius:50%}
+  /* ---------- menu ---------- */
+  .menu-btn{background:none;border:none;padding:6px;display:flex;flex-direction:column;gap:4px;
+    width:34px;align-items:stretch}
+  .menu-btn span{display:block;height:1px;background:var(--ink);transition:.25s}
+  .mov{position:fixed;inset:0;background:rgba(53,48,42,.3);z-index:120;display:none}
+  .mov.active{display:block}
+  .mdrawer{position:fixed;top:0;left:0;bottom:0;width:min(300px,84%);background:var(--paper);z-index:121;
+    border-right:1px solid var(--hair);transform:translateX(-100%);visibility:hidden;
+    transition:transform .38s cubic-bezier(.2,.7,.2,1),visibility 0s linear .38s;
+    display:flex;flex-direction:column;overflow-y:auto}
+  .mdrawer.active{transform:translateX(0);visibility:visible;
+    transition:transform .38s cubic-bezier(.2,.7,.2,1),visibility 0s}
+  .mdrawer .mhead{padding:22px 24px 14px;display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid var(--hair)}
+  .mdrawer .mhead .t{font-family:"Cormorant Garamond",Georgia,serif;font-size:20px}
+  .mnav{padding:14px 0 26px}
+  .mnav .grp{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--walnut);
+    padding:16px 24px 7px}
+  .mnav a{display:block;padding:11px 24px;font-size:14.5px;text-decoration:none;color:var(--ink);
+    border-left:2px solid transparent;transition:.18s;overflow-wrap:anywhere}
+  .mnav a:hover{background:var(--mist)}
+  .mnav a.on{border-left-color:var(--forest);color:var(--forest);font-weight:500;background:var(--sage-wash)}
+  /* ---------- info page ---------- */
+  .page{padding-top:60px;padding-bottom:80px;max-width:660px}
+  .page h1{font-family:"Cormorant Garamond",Georgia,serif;font-weight:300;
+    font-size:clamp(32px,5vw,46px);margin:12px 0 6px;overflow-wrap:anywhere}
+  .page .body{color:var(--soft-ink);font-size:15.5px;margin-top:26px}
+  .page .body p{margin-bottom:17px;overflow-wrap:anywhere}
+  .back{display:inline-block;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--soft-ink);text-decoration:none;margin-bottom:6px}
+  .back:hover{color:var(--forest)}
+  .cat-head{text-align:center;margin-bottom:44px}
+  .cat-head h2{font-family:"Cormorant Garamond",Georgia,serif;font-weight:300;
+    font-size:clamp(30px,4.6vw,46px);margin-top:12px;overflow-wrap:anywhere}
+  .cat-head .tag{color:var(--soft-ink);font-size:14.5px;margin-top:10px}
   /* ---------- search ---------- */
   .search-wrap{max-width:420px;margin:0 auto 40px;position:relative}
   .search-wrap input{width:100%;border:1px solid var(--hair);background:var(--paper);border-radius:999px;
@@ -246,13 +379,17 @@
 <body>
 <nav class="nav">
   <div class="in">
-    <button class="mark" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+    <button class="menu-btn" onclick="openMenu()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <button class="mark" onclick="goHome()">
       <span class="mark-logo" id="nav-logo"></span>
       <span>Hooked <em>Heaven</em></span>
     </button>
     <button class="bag" onclick="openBag()">Bag <span class="n" id="bag-n">(0)</span></button>
   </div>
 </nav>
+<div id="view-home">
 <header class="wrap hero doodle">
   <div>
     <div class="label">Handmade in Pakistan</div>
@@ -266,7 +403,7 @@
   </div>
 </header>
 <section class="wrap shelf" id="shop">
-  <div class="shelf-head">
+  <div class="shelf-head" id="shelf-head">
     <div class="label">The collection</div>
     <h2>Every piece, made to order</h2>
     <div class="rule"></div>
@@ -278,7 +415,7 @@
   </div>
   <div class="grid" id="grid"><div class="state">Loading…</div></div>
 </section>
-<section class="band">
+<section class="band" id="band">
   <div class="wrap">
     <div class="label">Something of your own</div>
     <h3>Custom orders welcome</h3>
@@ -286,6 +423,8 @@
     <a class="link" id="ig-link" href="#" target="_blank" rel="noopener">Message on Instagram</a>
   </div>
 </section>
+</div><!-- /view-home -->
+<section class="wrap page" id="view-page" style="display:none"></section>
 <footer class="doodle">
   <div class="wrap">
     <div class="mark">
@@ -298,6 +437,14 @@
     </div>
   </div>
 </footer>
+<div class="mov" id="mov" onclick="closeMenu()"></div>
+<aside class="mdrawer" id="mdrawer">
+  <div class="mhead">
+    <span class="t">Menu</span>
+    <button class="x" style="float:none" onclick="closeMenu()">&times;</button>
+  </div>
+  <nav class="mnav" id="mnav"></nav>
+</aside>
 <div class="ov" id="pov"><div class="sheet" id="psheet"></div></div>
 <div class="dov" id="dov" onclick="closeBag()"></div>
 <aside class="drawer" id="drawer">
@@ -316,7 +463,7 @@
 const SUPABASE_URL = "https://tztpscrdaryzgqzkxtgj.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_ZaUk5SrrJkRrcWnvCXClnQ_ErsmhGC8";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-let PRODUCTS = [], ZONES = [], SETTINGS = {}, BAG = [], PRODUCT_IMAGES = {};
+let PRODUCTS = [], ZONES = [], SETTINGS = {}, BAG = [], PRODUCT_IMAGES = {}, CATEGORIES = [], PAGES = [];
 const BAG_KEY = "hh_bag_v1";
 /* ---------- helpers ---------- */
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -399,11 +546,13 @@ async function shrinkImage(file, maxPx=1600, quality=0.82){
    LOAD
    ============================================================ */
 async function loadAll(){
-  const [prods, zones, setts, images] = await Promise.all([
+  const [prods, zones, setts, images, cats, pages] = await Promise.all([
     sb.from("products").select("*").order("sort_order"),
     sb.from("shipping_zones").select("*").eq("is_active", true).order("sort_order"),
     sb.from("shop_settings").select("*"),
-    sb.from("product_images").select("*").order("sort_order")
+    sb.from("product_images").select("*").order("sort_order"),
+    sb.from("categories").select("*").order("sort_order"),
+    sb.from("shop_pages").select("*").eq("is_visible", true).order("sort_order")
   ]);
   if(prods.error){
     document.getElementById("grid").innerHTML = '<div class="state">Could not load the shop right now. Please refresh.</div>';
@@ -416,6 +565,8 @@ async function loadAll(){
   (images.data || []).forEach(img => {
     (PRODUCT_IMAGES[img.product_id] ||= []).push(img);
   });
+  CATEGORIES = cats.data || [];
+  PAGES = pages.data || [];
   SETTINGS = {};
   (setts.data || []).forEach(s => SETTINGS[s.key] = s.value);
   document.title = SETTINGS.shop_name || "Hooked Heaven";
@@ -446,8 +597,107 @@ async function loadAll(){
     heroEmpty.style.display = "flex";
   }
   reconcileBag();
-  renderGrid();
+  renderMenu();
+  route();
 }
+/* ============================================================
+   ROUTING  —  #/            home (all products)
+               #/c/{slug}    one category
+               #/p/{slug}    an info page (About / Returns / Contact)
+   ============================================================ */
+let currentRoute = { kind:"home", slug:null };
+function parseHash(){
+  const h = (location.hash || "").replace(/^#/, "");
+  const mc = h.match(/^\/c\/(.+)$/);
+  if(mc) return { kind:"category", slug: decodeURIComponent(mc[1]) };
+  const mp = h.match(/^\/p\/(.+)$/);
+  if(mp) return { kind:"page", slug: decodeURIComponent(mp[1]) };
+  return { kind:"home", slug:null };
+}
+function goHome(){
+  if(location.hash && location.hash !== "#/") location.hash = "#/";
+  else { window.scrollTo({top:0,behavior:"smooth"}); }
+}
+function route(){
+  currentRoute = parseHash();
+  closeMenu();
+  const home = document.getElementById("view-home");
+  const page = document.getElementById("view-page");
+  const band = document.getElementById("band");
+
+  if(currentRoute.kind === "page"){
+    const pg = PAGES.find(p => p.slug === currentRoute.slug);
+    home.style.display = "none";
+    band.style.display = "none";
+    page.style.display = "";
+    page.innerHTML = pg
+      ? `<a class="back" href="#/">&larr; Back to the shop</a>
+         <h1>${esc(pg.title)}</h1>
+         <div class="body">${(pg.body||"").split(/\n\s*\n/).filter(Boolean)
+             .map(par => `<p>${esc(par).replace(/\n/g,"<br>")}</p>`).join("")}</div>`
+      : `<a class="back" href="#/">&larr; Back to the shop</a>
+         <h1>Page not found</h1>
+         <div class="body"><p>This page isn't available right now.</p></div>`;
+    window.scrollTo({top:0});
+    renderMenu();
+    return;
+  }
+
+  // home and category both show the product grid
+  page.style.display = "none";
+  page.innerHTML = "";
+  home.style.display = "";
+  band.style.display = "";
+  clearSearchSilently();
+  renderShelfHead();
+  renderGrid();
+  window.scrollTo({top:0});
+  renderMenu();
+}
+function renderShelfHead(){
+  const head = document.getElementById("shelf-head");
+  if(currentRoute.kind === "category"){
+    const c = CATEGORIES.find(x => x.slug === currentRoute.slug);
+    head.innerHTML = c
+      ? `<a class="back" href="#/">&larr; All products</a>
+         <h2>${esc(c.name)}</h2>
+         ${c.tagline ? `<div class="tag">${esc(c.tagline)}</div>` : ""}
+         <div class="rule"></div>`
+      : `<a class="back" href="#/">&larr; All products</a>
+         <h2>Category not found</h2><div class="rule"></div>`;
+    head.className = "cat-head";
+  }else{
+    head.innerHTML = `<div class="label">The collection</div>
+      <h2>Every piece, made to order</h2>
+      <div class="rule"></div>`;
+    head.className = "shelf-head";
+  }
+}
+/* ---------- menu ---------- */
+function renderMenu(){
+  const catLinks = CATEGORIES.map(c => {
+    const on = currentRoute.kind==="category" && currentRoute.slug===c.slug;
+    return `<a href="#/c/${encodeURIComponent(c.slug)}" class="${on?"on":""}">${esc(c.name)}</a>`;
+  }).join("");
+  const pageLinks = PAGES.map(p => {
+    const on = currentRoute.kind==="page" && currentRoute.slug===p.slug;
+    return `<a href="#/p/${encodeURIComponent(p.slug)}" class="${on?"on":""}">${esc(p.title)}</a>`;
+  }).join("");
+  document.getElementById("mnav").innerHTML = `
+    <a href="#/" class="${currentRoute.kind==="home"?"on":""}">Home</a>
+    ${catLinks ? `<div class="grp">Shop</div>${catLinks}` : ""}
+    <a href="#/" class="${currentRoute.kind==="home"?"on":""}">All Products</a>
+    ${pageLinks ? `<div class="grp">Information</div>${pageLinks}` : ""}`;
+}
+function openMenu(){
+  document.getElementById("mov").classList.add("active");
+  document.getElementById("mdrawer").classList.add("active");
+}
+function closeMenu(){
+  document.getElementById("mov").classList.remove("active");
+  document.getElementById("mdrawer").classList.remove("active");
+}
+window.addEventListener("hashchange", route);
 /* ---------- shelf ---------- */
 let searchQuery = "";
 function onSearch(){
@@ -455,11 +705,15 @@ function onSearch(){
   document.getElementById("search-wrap").classList.toggle("has-value", searchQuery.length > 0);
   renderGrid();
 }
-function clearSearch(){
+function clearSearchSilently(){
   searchQuery = "";
   const input = document.getElementById("search-input");
   if(input) input.value = "";
-  document.getElementById("search-wrap").classList.remove("has-value");
+  const wrap = document.getElementById("search-wrap");
+  if(wrap) wrap.classList.remove("has-value");
+}
+function clearSearch(){
+  clearSearchSilently();
   renderGrid();
 }
 function matchesSearch(p, q){
@@ -467,13 +721,21 @@ function matchesSearch(p, q){
   const hay = (p.name + " " + (p.description||"") + " " + (p.colors||"")).toLowerCase();
   return hay.includes(q.toLowerCase().trim());
 }
+function visibleProducts(){
+  if(currentRoute.kind !== "category") return PRODUCTS;
+  const c = CATEGORIES.find(x => x.slug === currentRoute.slug);
+  return c ? PRODUCTS.filter(p => p.category_id === c.id) : [];
+}
 function renderGrid(){
-  if(PRODUCTS.length === 0){
-    document.getElementById("grid").innerHTML = '<div class="state">New pieces are on the hook — check back soon.</div>';
+  const scope = visibleProducts();
+  if(scope.length === 0){
+    document.getElementById("grid").innerHTML = currentRoute.kind === "category"
+      ? '<div class="state">Nothing in this category just yet — check back soon.</div>'
+      : '<div class="state">New pieces are on the hook — check back soon.</div>';
     return;
   }
   const q = searchQuery.trim();
-  const list = PRODUCTS.filter(p => matchesSearch(p, q));
+  const list = scope.filter(p => matchesSearch(p, q));
   if(list.length === 0){
     document.getElementById("grid").innerHTML =
       `<div class="state">No products match "${esc(q)}" — try a different search.</div>`;
