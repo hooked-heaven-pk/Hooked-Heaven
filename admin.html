@@ -24,25 +24,30 @@
   --gold-soft:#CDBB90;
   --gold-wash:rgba(178,160,100,.13);
   --sage-wash:#E4EBE4;
+  /* these four were referenced throughout but never defined */
+  --card:#FFFDF8;
+  --ok:#3F6B4E;
+  --bad:#A8452F;
+  --warn:#8A6D2F;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{max-width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%}
   body{background:var(--paper);color:var(--ink);font-family:"Jost",system-ui,sans-serif;font-weight:300;line-height:1.55}
   button,input,select,textarea{font-family:inherit}
   .serif{font-family:"Cormorant Garamond",Georgia,serif;font-weight:400}
-
   /* login */
-  .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .login{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:20px}
   .login-box{background:var(--card);border:1px solid var(--hair);border-radius:14px;padding:40px 34px;max-width:380px;width:100%}
   .login-box h1{font-family:"Cormorant Garamond",Georgia,serif;font-size:27px;margin-bottom:4px}
   .login-box h1 em{font-style:italic;color:var(--forest)}
   .login-box .sub{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--soft-ink);margin-bottom:24px}
-
+  .inapp{background:#F5EBD6;border-radius:10px;padding:13px 15px;font-size:12.5px;
+    line-height:1.6;margin-bottom:20px;color:var(--walnut)}
   /* shell */
-  .app{display:none;min-height:100vh;grid-template-columns:212px 1fr;max-width:100%}
+  .app{display:none;min-height:100vh;grid-template-columns:212px minmax(0,1fr);max-width:100%}
   .app.active{display:grid}
   .app > div{min-width:0}
-  @media(max-width:820px){.app.active{grid-template-columns:1fr}}
+  @media(max-width:820px){.app.active{grid-template-columns:minmax(0,1fr)}}
   .side{background:var(--card);border-right:1px solid var(--hair);padding:26px 16px;display:flex;flex-direction:column}
   @media(max-width:820px){
     .side{position:fixed;inset:0 auto 0 0;width:212px;z-index:50;transform:translateX(-100%);transition:.25s}
@@ -55,21 +60,19 @@
   .side .brand em{font-style:italic;color:var(--forest)}
   .side nav{display:flex;flex-direction:column;gap:3px;flex:1}
   .side nav button{text-align:left;background:none;border:none;padding:10px 12px;border-radius:8px;font-size:13.5px;
-    color:var(--ink);display:flex;gap:10px;align-items:center;letter-spacing:.01em}
+    color:var(--ink);display:flex;gap:10px;align-items:center;letter-spacing:.01em;cursor:pointer}
   .side nav button:hover{background:var(--mist)}
   .side nav button.on{background:var(--mist);color:var(--forest);font-weight:500}
-  .side .out{margin-top:auto;background:none;border:none;color:var(--soft-ink);font-size:12.5px;text-align:left;padding:10px 12px}
+  .side .out{margin-top:auto;background:none;border:none;color:var(--soft-ink);font-size:12.5px;text-align:left;padding:10px 12px;cursor:pointer}
   .topbar{display:none;background:var(--card);border-bottom:1px solid var(--hair);padding:13px 18px;align-items:center;justify-content:space-between}
   @media(max-width:820px){.topbar{display:flex}}
-  .topbar button{background:none;border:none;font-size:20px;color:var(--forest)}
+  .topbar button{background:none;border:none;font-size:20px;color:var(--forest);cursor:pointer}
   .topbar .t{font-family:"Cormorant Garamond",Georgia,serif;font-size:17px}
-
   main{padding:32px 36px;max-width:960px}
   @media(max-width:820px){main{padding:18px 14px;max-width:100%}}
   .head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px}
   .head h1{font-family:"Cormorant Garamond",Georgia,serif;font-weight:400;font-size:27px}
   @media(max-width:620px){.head h1{font-size:22px}.head .btn{width:100%}}
-
   .btn{border:none;border-radius:999px;padding:11px 22px;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;
     font-weight:500;cursor:pointer;transition:.2s}
   .forest{background:var(--forest);color:var(--paper)}
@@ -80,11 +83,12 @@
   .danger:hover{background:#FBF0ED}
   .sm{padding:8px 15px;font-size:10.5px}
   .btn:disabled{opacity:.5;cursor:not-allowed}
-
   .card{background:var(--card);border-radius:12px;border:1px solid var(--hair);padding:20px;margin-bottom:14px}
+  .warnbar{background:#F5EBD6;color:var(--walnut);border-radius:10px;padding:12px 15px;
+    font-size:12.5px;line-height:1.55;margin-bottom:14px}
   table{width:100%;border-collapse:collapse}
   th{text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--soft-ink);padding:0 12px 10px;border-bottom:1px solid var(--hair)}
-  td{padding:12px;border-bottom:1px solid var(--hair);font-size:13.5px;vertical-align:middle}
+  td{padding:12px;border-bottom:1px solid var(--hair);font-size:13.5px;vertical-align:middle;overflow-wrap:anywhere}
   tr:last-child td{border-bottom:none}
   .thumb{width:44px;height:44px;border-radius:50%;object-fit:cover;background:var(--mist)}
   .pill{display:inline-block;padding:4px 11px;border-radius:999px;font-size:10.5px;font-weight:500;text-transform:capitalize;letter-spacing:.03em}
@@ -95,8 +99,9 @@
   .p-cancelled{background:#F3DFDA;color:var(--bad)}
   .p-yes{background:#DCEBE1;color:var(--ok)}
   .p-no{background:var(--mist);color:var(--soft-ink)}
-
-  @media(max-width:640px){
+  /* card-style rows: matched to the sidebar breakpoint so the 641–820px gap
+     no longer leaves a 5-column table squeezed into a phone-width screen */
+  @media(max-width:820px){
     .card{padding:12px}
     thead{display:none}
     table,tbody,tr,td{display:block;width:100%}
@@ -111,35 +116,34 @@
     .c-act .btn{flex:1}
     .thumb{width:38px;height:38px}
   }
-
   .state{text-align:center;padding:46px 20px;color:var(--soft-ink);font-size:13px}
-
   .ov{position:fixed;inset:0;background:rgba(53,48,42,.35);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:36px 20px;overflow-y:auto}
   .ov.active{display:flex}
   .sheet{background:var(--paper);border:1px solid var(--hair);border-radius:14px;max-width:520px;width:100%;padding:26px}
   .sheet h2{font-family:"Cormorant Garamond",Georgia,serif;font-weight:400;font-size:23px;margin-bottom:16px}
   .fld{margin-bottom:15px}
   .fld label{display:block;font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--soft-ink);margin-bottom:7px}
-  .fld input,.fld textarea,.fld select{width:100%;border:none;border-bottom:1px solid var(--hair);background:none;
-    padding:9px 2px;font-size:14.5px;color:var(--ink)}
-  .fld textarea{resize:vertical;min-height:64px}
+  .fld input,.fld textarea,.fld select{width:100%;max-width:100%;border:none;border-bottom:1px solid var(--hair);background:none;
+    padding:9px 2px;font-size:14.5px;color:var(--ink);border-radius:0}
+  .fld textarea{resize:vertical;min-height:64px;line-height:1.5}
   .fld input:focus,.fld textarea:focus,.fld select:focus{outline:none;border-bottom-color:var(--forest)}
+  .hint{font-size:11px;color:var(--soft-ink);margin:-10px 0 15px;line-height:1.5}
   .row2{display:flex;gap:14px}
   .row2 .fld{flex:1}
   .check{display:flex;align-items:center;gap:9px;margin-bottom:15px;font-size:14px}
   .check input{width:auto}
   .acts{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
-  .err{color:var(--bad);font-size:12.5px;margin-top:10px}
+  .err{color:var(--bad);font-size:12.5px;margin-top:10px;overflow-wrap:anywhere}
+  .err .why{display:block;font-size:11px;opacity:.8;margin-top:4px;line-height:1.5}
   .prev{width:100%;max-width:150px;aspect-ratio:1/1;border-radius:12px;object-fit:cover;background:var(--mist);margin-bottom:10px}
   .odet table{width:100%;font-size:13px;margin:10px 0}
   .odet td{padding:4px 0;border:none}
   .rcpt{width:100%;max-height:320px;object-fit:contain;border:1px solid var(--hair);border-radius:10px;background:var(--mist)}
   .grid1{display:grid;gap:14px;max-width:460px}
-
   @media(max-width:640px){
     .fld input,.fld textarea,.fld select,.login-box input{font-size:16px}
     .ov{padding:0;align-items:flex-start}
-    .sheet{border:none;border-radius:0;min-height:100vh;padding:20px 18px calc(28px + env(safe-area-inset-bottom))}
+    .sheet{border:none;border-radius:0;min-height:100vh;min-height:100dvh;padding:20px 18px calc(28px + env(safe-area-inset-bottom))}
     .row2{flex-direction:column;gap:0}
     .acts{flex-direction:column-reverse}
     .acts .btn{width:100%}
@@ -148,18 +152,17 @@
 </style>
 </head>
 <body>
-
 <div class="login" id="login">
   <div class="login-box">
     <h1>Hooked <em>Heaven</em></h1>
     <div class="sub">studio admin</div>
+    <div id="lg-inapp"></div>
     <div class="fld"><label>Email</label><input id="lg-email" type="email" placeholder="you@example.com"></div>
     <div class="fld"><label>Password</label><input id="lg-pass" type="password" placeholder="••••••••"></div>
     <button class="btn forest" style="width:100%" id="lg-btn" onclick="doLogin()">Sign in</button>
     <div class="err" id="lg-err" style="display:none"></div>
   </div>
 </div>
-
 <div class="app" id="app">
   <aside class="side" id="side">
     <div class="brand">Hooked <em>Heaven</em></div>
@@ -181,25 +184,86 @@
     <main id="main"></main>
   </div>
 </div>
-
 <div class="ov" id="ov"><div class="sheet" id="sheet"></div></div>
-
 <script>
 /* ============================================================
-   CONFIG — fill these in once the Supabase project exists
+   CONFIG
    ============================================================ */
 const SUPABASE_URL = "https://tztpscrdaryzgqzkxtgj.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_ZaUk5SrrJkRrcWnvCXClnQ_ErsmhGC8";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-let PRODS=[], ORDERS=[], ZONES=[], SET={}, view="products";
-
+let PRODS=[], ORDERS=[], ZONES=[], SET={}, view="products", LOAD_ERR=[];
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function imgUrl(p){ if(!p) return ""; return sb.storage.from("product-images").getPublicUrl(p).data.publicUrl; }
 function money(n){ return (SET.currency||"PKR") + " " + Number(n).toLocaleString(); }
-
+/* ============================================================
+   HELPERS
+   ============================================================ */
+/* crypto.randomUUID is missing on older mobile WebViews */
+function uid(){
+  try{ if(window.crypto && typeof crypto.randomUUID==="function") return crypto.randomUUID(); }catch(e){}
+  return "id-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,10);
+}
+/* next free slot, not list length — deleting a product used to cause a collision */
+function nextSort(list){ return list.reduce((m,x)=>Math.max(m,Number(x.sort_order)||0),0)+1; }
+function errText(e){
+  if(!e) return "unknown error";
+  return [e.code,e.name,e.status||e.statusCode,e.message||e.error,e.details,e.hint]
+    .filter(Boolean).join(" · ").slice(0,240);
+}
+function showErr(el,msg,detail){
+  el.innerHTML = esc(msg) + (detail ? `<span class="why">${esc(detail)}</span>` : "");
+  el.style.display = "block";
+}
+function isInApp(){ return /Instagram|FBAN|FBAV|FB_IAB|Line\/|KAKAOTALK/i.test(navigator.userAgent||""); }
+/* ---------- photo shrink: phone originals are 4–10MB and fail to upload ---------- */
+function loadBitmap(file){
+  return new Promise((resolve,reject)=>{
+    const fallback=()=>{
+      const img=new Image(), url=URL.createObjectURL(file);
+      img.onload=()=>{ URL.revokeObjectURL(url); resolve(img); };
+      img.onerror=()=>{ URL.revokeObjectURL(url); reject(new Error("could not read the photo")); };
+      img.src=url;
+    };
+    if(typeof createImageBitmap==="function") createImageBitmap(file).then(resolve).catch(fallback);
+    else fallback();
+  });
+}
+async function shrinkImage(file, maxPx=1400, quality=0.82){
+  if(!file || !/^image\//.test(file.type||"")) return file;
+  if(file.size < 400*1024) return file;
+  try{
+    const src = await loadBitmap(file);
+    const sw = src.width || src.naturalWidth, sh = src.height || src.naturalHeight;
+    if(!sw || !sh) return file;
+    const k = Math.min(1, maxPx/Math.max(sw,sh));
+    const c = document.createElement("canvas");
+    c.width = Math.round(sw*k); c.height = Math.round(sh*k);
+    c.getContext("2d").drawImage(src,0,0,c.width,c.height);
+    const blob = await new Promise(r=>c.toBlob(r,"image/jpeg",quality));
+    return (blob && blob.size < file.size) ? blob : file;
+  }catch(e){ console.warn("resize skipped:",e); return file; }
+}
+/* one upload path for products and the logo */
+async function uploadImage(file, prefix){
+  if(!file.size) throw new Error("This browser could not read the photo. Try picking it from Gallery.");
+  const blob = await shrinkImage(file);
+  const ext = (blob.type === "image/jpeg") ? "jpg"
+            : (((file.name||"").split(".").pop() || "jpg").toLowerCase());
+  const path = (prefix||"") + uid() + "." + ext;
+  const up = await sb.storage.from("product-images")
+    .upload(path, blob, { contentType: blob.type || "image/jpeg" });
+  if(up.error) throw up.error;
+  return up.data.path;
+}
 /* ---------- auth ---------- */
 async function boot(){
+  if(isInApp()){
+    document.getElementById("lg-inapp").innerHTML =
+      `<div class="inapp">You're in Instagram's built-in browser, which doesn't keep you signed in
+       and can block photo uploads.<br><br>Tap <strong>&#8943;</strong> at the top right and choose
+       <strong>Open in browser</strong>, then bookmark the page so it's one tap away next time.</div>`;
+  }
   const { data } = await sb.auth.getSession();
   data.session ? showApp() : showLogin();
 }
@@ -219,14 +283,16 @@ async function doLogout(){ await sb.auth.signOut(); showLogin(); }
 function showLogin(){ document.getElementById("login").style.display="flex"; document.getElementById("app").classList.remove("active"); }
 function showApp(){ document.getElementById("login").style.display="none"; document.getElementById("app").classList.add("active"); loadAll(); }
 sb.auth.onAuthStateChange(e=>{ if(e==="SIGNED_OUT") showLogin(); });
-
 /* ---------- data ---------- */
-async function loadAll(){ await Promise.all([ldProds(),ldOrders(),ldZones(),ldSet()]); go(view); }
-async function ldProds(){ const r=await sb.from("products").select("*").order("sort_order"); if(!r.error) PRODS=r.data; }
-async function ldOrders(){ const r=await sb.from("orders").select("*, order_items(*)").order("created_at",{ascending:false}); if(!r.error) ORDERS=r.data; }
-async function ldZones(){ const r=await sb.from("shipping_zones").select("*").order("sort_order"); if(!r.error) ZONES=r.data; }
-async function ldSet(){ const r=await sb.from("shop_settings").select("*"); if(!r.error){ SET={}; r.data.forEach(s=>SET[s.key]=s.value); } }
-
+async function loadAll(){ LOAD_ERR=[]; await Promise.all([ldProds(),ldOrders(),ldZones(),ldSet()]); go(view); }
+async function ldProds(){ const r=await sb.from("products").select("*").order("sort_order");
+  if(r.error){ console.error(r.error); LOAD_ERR.push("products"); } else PRODS=r.data; }
+async function ldOrders(){ const r=await sb.from("orders").select("*, order_items(*)").order("created_at",{ascending:false});
+  if(r.error){ console.error(r.error); LOAD_ERR.push("orders"); } else ORDERS=r.data; }
+async function ldZones(){ const r=await sb.from("shipping_zones").select("*").order("sort_order");
+  if(r.error){ console.error(r.error); LOAD_ERR.push("delivery areas"); } else ZONES=r.data; }
+async function ldSet(){ const r=await sb.from("shop_settings").select("*");
+  if(r.error){ console.error(r.error); LOAD_ERR.push("settings"); } else { SET={}; r.data.forEach(s=>SET[s.key]=s.value); } }
 /* ---------- shell ---------- */
 function side(force){
   const s=document.getElementById("side"), b=document.getElementById("backdrop");
@@ -238,11 +304,15 @@ function go(v){
   document.querySelectorAll(".side nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
   side(false);
   ({products:vProducts, orders:vOrders, shipping:vZones, settings:vSettings}[v])();
+  if(LOAD_ERR.length){
+    document.getElementById("main").insertAdjacentHTML("afterbegin",
+      `<div class="warnbar">Some data didn't load (${esc(LOAD_ERR.join(", "))}).
+       What you see may be out of date — please refresh the page.</div>`);
+  }
 }
 function openSheet(){ const o=document.getElementById("ov"); o.classList.add("active"); o.scrollTop=0; document.body.style.overflow="hidden"; }
 function closeSheet(){ document.getElementById("ov").classList.remove("active"); document.body.style.overflow=""; }
 document.getElementById("ov").addEventListener("click",e=>{ if(e.target.id==="ov") closeSheet(); });
-
 /* ============================================================
    PRODUCTS
    ============================================================ */
@@ -266,9 +336,11 @@ function edProd(id){
     <h2>${p?"Edit product":"Add product"}</h2>
     ${p&&p.image_path?`<img class="prev" src="${imgUrl(p.image_path)}">`:""}
     <div class="fld"><label>Photo</label><input type="file" id="f-img" accept="image/*"></div>
+    <div class="hint">Large photos are resized automatically, so you can upload straight from your phone.</div>
     <div class="fld"><label>Name</label><input id="f-name" value="${p?esc(p.name):""}" placeholder="e.g. Sunflower Bag Charm"></div>
     <div class="fld"><label>Price (${esc(SET.currency||"PKR")})</label><input id="f-price" type="number" min="0" step="1" value="${p?p.price:""}"></div>
-    <div class="fld"><label>Short description</label><input id="f-desc" value="${p?esc(p.description||""):""}" placeholder="e.g. Pair of sunflowers · cotton yarn"></div>
+    <div class="fld"><label>Short description</label><textarea id="f-desc" rows="3" placeholder="e.g. Pair of sunflowers · cotton yarn">${p?esc(p.description||""):""}</textarea></div>
+    <div class="hint">The first two lines show on the shop page — the full text appears when a customer taps the product.</div>
     <div class="check"><input type="checkbox" id="f-stock" ${!p||p.in_stock?"checked":""}><label style="margin:0;text-transform:none;font-weight:400;font-size:14px;letter-spacing:0" for="f-stock">Available to order</label></div>
     <div class="err" id="f-err" style="display:none"></div>
     <div class="acts"><button class="btn ghost" onclick="closeSheet()">Cancel</button><button class="btn forest" id="f-save" onclick="svProd('${p?p.id:""}')">Save</button></div>`;
@@ -281,36 +353,37 @@ async function svProd(id){
   const stock=document.getElementById("f-stock").checked;
   const file=document.getElementById("f-img").files[0];
   const err=document.getElementById("f-err"), btn=document.getElementById("f-save");
-
   err.style.display="none";
-  if(!name||isNaN(price)||price<0){ err.textContent="Please fill in a name and a valid price."; err.style.display="block"; return; }
+  if(!name||isNaN(price)||price<0){ showErr(err,"Please fill in a name and a valid price."); return; }
   btn.disabled=true; btn.textContent="Saving…";
+  let stage="signing in";
   try{
+    const { data:s } = await sb.auth.getSession();
+    if(!s || !s.session) throw new Error("You've been signed out. Please sign in again.");
     const payload={name, price, description:desc||null, in_stock:stock};
     if(file){
-      const ext=file.name.split(".").pop();
-      const path=`${crypto.randomUUID()}.${ext}`;
-      const up=await sb.storage.from("product-images").upload(path,file);
-      if(up.error) throw up.error;
-      payload.image_path=path;
+      stage="uploading the photo";
+      btn.textContent="Uploading photo…";
+      payload.image_path = await uploadImage(file);
     }
+    stage="saving the product";
+    btn.textContent="Saving…";
     const r = id ? await sb.from("products").update(payload).eq("id",id)
-                 : await sb.from("products").insert({...payload, sort_order:PRODS.length+1});
+                 : await sb.from("products").insert({...payload, sort_order:nextSort(PRODS)});
     if(r.error) throw r.error;
     closeSheet(); await ldProds(); vProducts();
   }catch(e){
-    console.error(e);
-    err.textContent="Could not save. Please try again."; err.style.display="block";
+    console.error("[svProd]",stage,e);
+    showErr(err,"Could not save while "+stage+". Please try again.", errText(e));
     btn.disabled=false; btn.textContent="Save";
   }
 }
 async function delProd(id){
   if(!confirm("Delete this product? This can't be undone.")) return;
   const r=await sb.from("products").delete().eq("id",id);
-  if(r.error){ alert("Could not delete."); return; }
+  if(r.error){ alert("Could not delete. "+errText(r.error)); return; }
   await ldProds(); vProducts();
 }
-
 /* ============================================================
    ORDERS
    ============================================================ */
@@ -329,7 +402,6 @@ function vOrders(){
 }
 async function viewOrder(id){
   const o = ORDERS.find(x=>x.id===id); if(!o) return;
-
   let rcpt = '<p style="color:var(--soft-ink);font-size:13px">No receipt uploaded.</p>';
   if(o.receipt_path){
     const { data, error } = await sb.storage.from("payment-receipts").createSignedUrl(o.receipt_path, 3600);
@@ -342,10 +414,8 @@ async function viewOrder(id){
       rcpt = '<p style="color:var(--bad);font-size:13px">Receipt could not be loaded.</p>';
     }
   }
-
   const items = (o.order_items||[]).map(i=>
     `<tr><td>${esc(i.product_name)} × ${i.quantity}</td><td style="text-align:right">${money(i.line_total)}</td></tr>`).join("");
-
   document.getElementById("sheet").innerHTML = `
     <h2>${esc(o.order_number)}</h2>
     <div class="odet">
@@ -367,10 +437,9 @@ async function viewOrder(id){
 async function svStatus(id){
   const status=document.getElementById("o-status").value;
   const r=await sb.from("orders").update({status}).eq("id",id);
-  if(r.error){ const e=document.getElementById("o-err"); e.textContent="Could not update."; e.style.display="block"; return; }
+  if(r.error){ showErr(document.getElementById("o-err"),"Could not update.",errText(r.error)); return; }
   closeSheet(); await ldOrders(); vOrders();
 }
-
 /* ============================================================
    SHIPPING ZONES
    ============================================================ */
@@ -408,26 +477,26 @@ async function svZone(id){
   const note=document.getElementById("z-note").value.trim();
   const active=document.getElementById("z-active").checked;
   const err=document.getElementById("z-err"), btn=document.getElementById("z-save");
-
   err.style.display="none";
-  if(!name||isNaN(fee)||fee<0){ err.textContent="Please enter an area name and a valid fee."; err.style.display="block"; return; }
+  if(!name||isNaN(fee)||fee<0){ showErr(err,"Please enter an area name and a valid fee."); return; }
   btn.disabled=true; btn.textContent="Saving…";
   const payload={name, fee, note:note||null, is_active:active};
   const r = id ? await sb.from("shipping_zones").update(payload).eq("id",id)
-               : await sb.from("shipping_zones").insert({...payload, sort_order:ZONES.length+1});
+               : await sb.from("shipping_zones").insert({...payload, sort_order:nextSort(ZONES)});
   if(r.error){
-    err.textContent = String(r.error.message||"").includes("duplicate") ? "An area with that name already exists." : "Could not save.";
-    err.style.display="block"; btn.disabled=false; btn.textContent="Save"; return;
+    String(r.error.message||"").includes("duplicate")
+      ? showErr(err,"An area with that name already exists.")
+      : showErr(err,"Could not save.",errText(r.error));
+    btn.disabled=false; btn.textContent="Save"; return;
   }
   closeSheet(); await ldZones(); vZones();
 }
 async function delZone(id){
   if(!confirm("Delete this delivery area? Past orders keep the area name they were placed with.")) return;
   const r=await sb.from("shipping_zones").delete().eq("id",id);
-  if(r.error){ alert("Could not delete."); return; }
+  if(r.error){ alert("Could not delete. "+errText(r.error)); return; }
   await ldZones(); vZones();
 }
-
 /* ============================================================
    SETTINGS
    ============================================================ */
@@ -447,8 +516,8 @@ function vSettings(){
       <p style="color:var(--soft-ink);font-size:12.5px;margin-bottom:14px">Shown in the header and footer of your site.</p>
       ${SET.logo_path ? `<img class="prev" src="${imgUrl(SET.logo_path)}">` : ""}
       <div class="fld"><label>Upload logo</label><input type="file" id="s-logo" accept="image/*"></div>
-      <button class="btn forest sm" onclick="saveLogo()">Save logo</button>
-      <span id="logo-msg" style="display:none;font-size:13px;margin-left:10px"></span>
+      <button class="btn forest sm" id="logo-save" onclick="saveLogo()">Save logo</button>
+      <div class="err" id="logo-msg" style="display:none"></div>
     </div>
     <div class="card"><div class="grid1">
       ${SFIELDS.map(([k,l])=>`<div class="fld"><label>${l}</label><input id="s-${k}" value="${esc(SET[k]||"")}"></div>`).join("")}
@@ -458,7 +527,6 @@ function vSettings(){
     <div class="card" style="background:var(--mist);border:none;font-size:13px">
       Delivery fees are managed in <strong>Delivery areas</strong>.
     </div>
-
     <div class="card">
       <h2 style="margin-bottom:6px">Change password</h2>
       <p style="color:var(--soft-ink);font-size:12.5px;margin-bottom:16px">
@@ -478,24 +546,22 @@ function vSettings(){
 }
 async function saveLogo(){
   const file=document.getElementById("s-logo").files[0];
-  const msg=document.getElementById("logo-msg");
+  const msg=document.getElementById("logo-msg"), btn=document.getElementById("logo-save");
   msg.style.display="none";
-  if(!file){ msg.textContent="Choose a file first"; msg.style.color="var(--bad)"; msg.style.display="inline"; return; }
+  if(!file){ showErr(msg,"Choose a file first."); return; }
+  btn.disabled=true; btn.textContent="Saving…";
   try{
-    const ext=file.name.split(".").pop();
-    const path=`logo-${crypto.randomUUID()}.${ext}`;
-    const up=await sb.storage.from("product-images").upload(path,file);
-    if(up.error) throw up.error;
+    const path = await uploadImage(file,"logo-");
     const r=await sb.from("shop_settings").upsert({key:"logo_path", value:path});
     if(r.error) throw r.error;
     await ldSet();
     vSettings();
   }catch(e){
     console.error(e);
-    msg.textContent="Could not save logo"; msg.style.color="var(--bad)"; msg.style.display="inline";
+    showErr(msg,"Could not save the logo.",errText(e));
+    btn.disabled=false; btn.textContent="Save logo";
   }
 }
-
 async function svSettings(){
   const msg=document.getElementById("s-msg");
   try{
@@ -509,35 +575,29 @@ async function svSettings(){
     setTimeout(()=>msg.style.display="none",2000);
   }catch(e){
     console.error(e);
-    msg.textContent="Could not save"; msg.style.color="var(--bad)"; msg.style.display="inline";
+    msg.textContent="Could not save — "+errText(e); msg.style.color="var(--bad)"; msg.style.display="inline";
   }
 }
-
 async function changePassword(){
   const pw=document.getElementById("pw-new").value;
   const again=document.getElementById("pw-again").value;
   const msg=document.getElementById("pw-msg");
   const btn=document.getElementById("pw-save");
   const fail=(t)=>{ msg.textContent=t; msg.style.color="var(--bad)"; msg.style.display="inline"; };
-
   msg.style.display="none";
   if(!pw || !again) return fail("Please fill in both boxes.");
   if(pw.length < 8) return fail("Please use at least 8 characters.");
   if(pw !== again) return fail("The two passwords don't match.");
-
   btn.disabled=true; btn.textContent="Updating…";
   const { error } = await sb.auth.updateUser({ password: pw });
   btn.disabled=false; btn.textContent="Update password";
-
   if(error){ console.error(error); return fail("Could not update password. Please try again."); }
-
   document.getElementById("pw-new").value="";
   document.getElementById("pw-again").value="";
   msg.textContent="Password updated — use it next time you sign in.";
   msg.style.color="var(--ok)";
   msg.style.display="inline";
 }
-
 boot();
 </script>
 </body>
