@@ -617,7 +617,79 @@ function vCats(){
       ${uncategorised?`<br><br><strong>${uncategorised} product${uncategorised===1?" has":"s have"} no category yet.</strong>
         You can set one by editing the product.`:""}
     </div>
-    <div class="card">${CATS.length?`<table><thead><tr><th>Category</th><th>Products</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="state">No categories yet.</div>'}</div>`;
+    <div class="card">${CATS.length?`<table><thead><tr><th>Category</th><th>Products</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="state">No categories yet.</div>'}</div>
+    ${typesSection()}`;
+}
+/* ---------- product types ----------
+   A type only exists because some product uses it, so there is no separate
+   list to keep tidy — but the owner still needs a way to fix a typo across
+   every product at once, or clear a type off them entirely. */
+function typeUsage(){
+  const map = new Map();   // lower-case key -> { label, ids[] }
+  PRODS.forEach(p=>{
+    const t = (p.subtype||"").trim();
+    if(!t) return;
+    const k = t.toLowerCase();
+    if(!map.has(k)) map.set(k, { label:t, ids:[] });
+    map.get(k).ids.push(p.id);
+  });
+  return [...map.values()].sort((a,b)=>a.label.localeCompare(b.label));
+}
+function typesSection(){
+  const types = typeUsage();
+  return `
+    <div class="head" style="margin-top:30px"><h1 style="font-size:22px">Product types</h1></div>
+    <div class="card" style="background:var(--mist);border:none;font-size:13px">
+      Types are the filter buttons customers see inside a category (for example Hair Pins
+      inside Hair Accessories). You set a type when you edit a product \u2014 this list just lets you
+      rename one everywhere at once, or clear it off every product using it.
+      A category needs at least two different types before the buttons appear on your site.
+    </div>
+    <div class="card">${types.length ? `<table><thead><tr><th>Type</th><th>Used by</th><th></th></tr></thead><tbody>
+      ${types.map(t=>`<tr>
+        <td class="c-title"><strong>${esc(t.label)}</strong></td>
+        <td>${t.ids.length} product${t.ids.length===1?"":"s"}</td>
+        <td class="c-act">
+          <button class="btn ghost sm" onclick="renameType('${esc(t.label).replace(/'/g,"\\'")}')">Rename</button>
+          <button class="btn danger sm" onclick="clearType('${esc(t.label).replace(/'/g,"\\'")}')">Remove</button>
+        </td></tr>`).join("")}
+      </tbody></table>` : '<div class="state">No types yet. Add one by editing a product.</div>'}</div>`;
+}
+async function applyToType(label, value, verb){
+  const ids = PRODS.filter(p => (p.subtype||"").trim().toLowerCase() === label.toLowerCase()).map(p=>p.id);
+  if(!ids.length) return;
+  for(const id of ids){
+    const r = await sb.from("products").update({ subtype:value }).eq("id",id);
+    if(r.error){ alert("Could not "+verb+" the type. "+errText(r.error)); await ldProds(); vCats(); return; }
+  }
+  await ldProds();
+  vCats();
+}
+function renameType(label){
+  const n = PRODS.filter(p => (p.subtype||"").trim().toLowerCase() === label.toLowerCase()).length;
+  document.getElementById("sheet").innerHTML = `
+    <h2>Rename type</h2>
+    <div class="fld"><label>Type name</label><input id="t-name" value="${esc(label)}"></div>
+    <div class="hint">This updates all ${n} product${n===1?"":"s"} using "${esc(label)}".</div>
+    <div class="err" id="t-err" style="display:none"></div>
+    <div class="acts"><button class="btn ghost" onclick="closeSheet()">Cancel</button>
+      <button class="btn forest" id="t-save" onclick="svRenameType('${esc(label).replace(/'/g,"\\'")}')">Save</button></div>`;
+  openSheet();
+}
+async function svRenameType(label){
+  const input = document.getElementById("t-name").value.trim();
+  const err = document.getElementById("t-err"), btn = document.getElementById("t-save");
+  err.style.display = "none";
+  if(!input){ showErr(err,"Please enter a name, or use Remove to clear the type instead."); return; }
+  if(input === label){ closeSheet(); return; }
+  btn.disabled = true; btn.textContent = "Saving…";
+  closeSheet();
+  await applyToType(label, input, "rename");
+}
+async function clearType(label){
+  const n = PRODS.filter(p => (p.subtype||"").trim().toLowerCase() === label.toLowerCase()).length;
+  if(!confirm(`Remove the type "${label}"?\n\n${n} product${n===1?"":"s"} will keep everything else \u2014 ${n===1?"it":"they"} just won't have a type any more.`)) return;
+  await applyToType(label, null, "remove");
 }
 function edCat(id){
   const c = id?CATS.find(x=>x.id===id):null;
