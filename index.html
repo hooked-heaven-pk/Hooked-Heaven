@@ -105,8 +105,15 @@ function goHome(){
   if(location.hash && location.hash !== "#/") location.hash = "#/";
   else { window.scrollTo({top:0,behavior:"smooth"}); }
 }
+let prevRoute = null;
 function route(){
+  const before = currentRoute;
   currentRoute = parseHash();
+  // switching chips inside the same category should feel instant, not jump
+  // the reader back to the top of the page
+  const chipOnly = before && before.kind === "category" && currentRoute.kind === "category"
+                   && before.slug === currentRoute.slug
+                   && before.subtype !== currentRoute.subtype;
   closeMenu();
   const home = document.getElementById("view-home");
   const page = document.getElementById("view-page");
@@ -136,11 +143,11 @@ function route(){
   page.innerHTML = "";
   home.style.display = "";
   band.style.display = "";
-  clearSearchSilently();
+  if(!chipOnly) clearSearchSilently();
   renderShelfHead();
   renderFilters();
   renderGrid();
-  window.scrollTo({top:0});
+  if(!chipOnly) window.scrollTo({top:0});
   renderMenu();
 }
 function renderShelfHead(){
@@ -648,8 +655,15 @@ function goHome(){
   if(location.hash && location.hash !== "#/") location.hash = "#/";
   else { window.scrollTo({top:0,behavior:"smooth"}); }
 }
+let prevRoute = null;
 function route(){
+  const before = currentRoute;
   currentRoute = parseHash();
+  // switching chips inside the same category should feel instant, not jump
+  // the reader back to the top of the page
+  const chipOnly = before && before.kind === "category" && currentRoute.kind === "category"
+                   && before.slug === currentRoute.slug
+                   && before.subtype !== currentRoute.subtype;
   closeMenu();
   const home = document.getElementById("view-home");
   const page = document.getElementById("view-page");
@@ -679,11 +693,11 @@ function route(){
   page.innerHTML = "";
   home.style.display = "";
   band.style.display = "";
-  clearSearchSilently();
+  if(!chipOnly) clearSearchSilently();
   renderShelfHead();
   renderFilters();
   renderGrid();
-  window.scrollTo({top:0});
+  if(!chipOnly) window.scrollTo({top:0});
   renderMenu();
 }
 function renderShelfHead(){
