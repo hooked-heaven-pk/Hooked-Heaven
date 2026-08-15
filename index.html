@@ -86,116 +86,6 @@
   .hero-arch.logo-mode img{width:100%;height:100%;object-fit:contain;padding:12px;transition:none}
   .hero-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft-ink)}
-  /* ============================================================
-   ROUTING  —  #/            home (all products)
-               #/c/{slug}    one category
-               #/p/{slug}    an info page (About / Returns / Contact)
-   ============================================================ */
-let currentRoute = { kind:"home", slug:null, subtype:null };
-function parseHash(){
-  const h = (location.hash || "").replace(/^#/, "");
-  const mc = h.match(/^\/c\/([^\/]+)(?:\/(.+))?$/);
-  if(mc) return { kind:"category", slug: decodeURIComponent(mc[1]),
-                  subtype: mc[2] ? decodeURIComponent(mc[2]) : null };
-  const mp = h.match(/^\/p\/(.+)$/);
-  if(mp) return { kind:"page", slug: decodeURIComponent(mp[1]), subtype:null };
-  return { kind:"home", slug:null, subtype:null };
-}
-function goHome(){
-  if(location.hash && location.hash !== "#/") location.hash = "#/";
-  else { window.scrollTo({top:0,behavior:"smooth"}); }
-}
-let prevRoute = null;
-function route(){
-  const before = currentRoute;
-  currentRoute = parseHash();
-  // switching chips inside the same category should feel instant, not jump
-  // the reader back to the top of the page
-  const chipOnly = before && before.kind === "category" && currentRoute.kind === "category"
-                   && before.slug === currentRoute.slug
-                   && before.subtype !== currentRoute.subtype;
-  closeMenu();
-  const home = document.getElementById("view-home");
-  const page = document.getElementById("view-page");
-  const band = document.getElementById("band");
-
-  if(currentRoute.kind === "page"){
-    const pg = PAGES.find(p => p.slug === currentRoute.slug);
-    document.getElementById("filters").style.display = "none";
-    home.style.display = "none";
-    band.style.display = "none";
-    page.style.display = "";
-    page.innerHTML = pg
-      ? `<a class="back" href="#/">&larr; Back to the shop</a>
-         <h1>${esc(pg.title)}</h1>
-         <div class="body">${(pg.body||"").split(/\n\s*\n/).filter(Boolean)
-             .map(par => `<p>${esc(par).replace(/\n/g,"<br>")}</p>`).join("")}</div>`
-      : `<a class="back" href="#/">&larr; Back to the shop</a>
-         <h1>Page not found</h1>
-         <div class="body"><p>This page isn't available right now.</p></div>`;
-    window.scrollTo({top:0});
-    renderMenu();
-    return;
-  }
-
-  // home and category both show the product grid
-  page.style.display = "none";
-  page.innerHTML = "";
-  home.style.display = "";
-  band.style.display = "";
-  if(!chipOnly) clearSearchSilently();
-  renderShelfHead();
-  renderFilters();
-  renderGrid();
-  if(!chipOnly) window.scrollTo({top:0});
-  renderMenu();
-}
-function renderShelfHead(){
-  const head = document.getElementById("shelf-head");
-  if(currentRoute.kind === "category"){
-    const c = CATEGORIES.find(x => x.slug === currentRoute.slug);
-    head.innerHTML = c
-      ? `<a class="back" href="#/">&larr; All products</a>
-         <h2>${esc(c.name)}</h2>
-         ${currentRoute.subtype
-             ? `<div class="tag">${esc(currentRoute.subtype)}</div>`
-             : (c.tagline ? `<div class="tag">${esc(c.tagline)}</div>` : "")}
-         <div class="rule"></div>`
-      : `<a class="back" href="#/">&larr; All products</a>
-         <h2>Category not found</h2><div class="rule"></div>`;
-    head.className = "cat-head";
-  }else{
-    head.innerHTML = `<div class="label">The collection</div>
-      <h2>Every piece, made to order</h2>
-      <div class="rule"></div>`;
-    head.className = "shelf-head";
-  }
-}
-/* ---------- menu ---------- */
-function renderMenu(){
-  const catLinks = CATEGORIES.map(c => {
-    const on = currentRoute.kind==="category" && currentRoute.slug===c.slug;
-    return `<a href="#/c/${encodeURIComponent(c.slug)}" class="${on?"on":""}">${esc(c.name)}</a>`;
-  }).join("");
-  const pageLinks = PAGES.map(p => {
-    const on = currentRoute.kind==="page" && currentRoute.slug===p.slug;
-    return `<a href="#/p/${encodeURIComponent(p.slug)}" class="${on?"on":""}">${esc(p.title)}</a>`;
-  }).join("");
-  document.getElementById("mnav").innerHTML = `
-    <a href="#/" class="${currentRoute.kind==="home"?"on":""}">Home</a>
-    ${catLinks ? `<div class="grp">Shop</div>${catLinks}` : ""}
-    <a href="#/" class="${currentRoute.kind==="home"?"on":""}">All Products</a>
-    ${pageLinks ? `<div class="grp">Information</div>${pageLinks}` : ""}`;
-}
-function openMenu(){
-  document.getElementById("mov").classList.add("active");
-  document.getElementById("mdrawer").classList.add("active");
-}
-function closeMenu(){
-  document.getElementById("mov").classList.remove("active");
-  document.getElementById("mdrawer").classList.remove("active");
-}
-window.addEventListener("hashchange", route);
 /* ---------- shelf ---------- */
   .shelf{padding-top:20px;padding-bottom:10px}
   .shelf-head{text-align:center;margin-bottom:54px}
@@ -239,6 +129,10 @@ window.addEventListener("hashchange", route);
   .cat-head h2{font-family:"Cormorant Garamond",Georgia,serif;font-weight:300;
     font-size:clamp(30px,4.6vw,46px);margin-top:12px;overflow-wrap:anywhere}
   .cat-head .tag{color:var(--soft-ink);font-size:14.5px;margin-top:10px}
+  /* ---------- view all ---------- */
+  .viewall{text-align:center;margin-top:52px}
+  .viewall .count{display:block;font-size:12px;color:var(--soft-ink);margin-bottom:14px;
+    letter-spacing:.04em}
   /* ---------- category filter chips ---------- */
   .filters{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;
     scrollbar-width:none;padding:0 0 4px;margin:0 auto 30px;justify-content:flex-start}
@@ -450,6 +344,7 @@ window.addEventListener("hashchange", route);
     <button class="search-clear" onclick="clearSearch()" aria-label="Clear search">&times;</button>
   </div>
   <div class="grid" id="grid"><div class="state">Loading…</div></div>
+  <div id="viewall"></div>
 </section>
 <section class="band" id="band">
   <div class="wrap">
@@ -499,7 +394,7 @@ window.addEventListener("hashchange", route);
 const SUPABASE_URL = "https://tztpscrdaryzgqzkxtgj.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_ZaUk5SrrJkRrcWnvCXClnQ_ErsmhGC8";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-let PRODUCTS = [], ZONES = [], SETTINGS = {}, BAG = [], PRODUCT_IMAGES = {}, CATEGORIES = [], PAGES = [];
+let PRODUCTS = [], ZONES = [], SETTINGS = {}, BAG = [], PRODUCT_IMAGES = {}, CATEGORIES = [], PAGES = [], PRODUCT_CATS = {};
 const BAG_KEY = "hh_bag_v1";
 /* ---------- helpers ---------- */
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -582,13 +477,14 @@ async function shrinkImage(file, maxPx=1600, quality=0.82){
    LOAD
    ============================================================ */
 async function loadAll(){
-  const [prods, zones, setts, images, cats, pages] = await Promise.all([
+  const [prods, zones, setts, images, cats, pages, pcats] = await Promise.all([
     sb.from("products").select("*").order("sort_order"),
     sb.from("shipping_zones").select("*").eq("is_active", true).order("sort_order"),
     sb.from("shop_settings").select("*"),
     sb.from("product_images").select("*").order("sort_order"),
     sb.from("categories").select("*").order("sort_order"),
-    sb.from("shop_pages").select("*").eq("is_visible", true).order("sort_order")
+    sb.from("shop_pages").select("*").eq("is_visible", true).order("sort_order"),
+    sb.from("product_categories").select("*")
   ]);
   if(prods.error){
     document.getElementById("grid").innerHTML = '<div class="state">Could not load the shop right now. Please refresh.</div>';
@@ -603,6 +499,10 @@ async function loadAll(){
   });
   CATEGORIES = cats.data || [];
   PAGES = pages.data || [];
+  PRODUCT_CATS = {};
+  ((pcats && pcats.data) || []).forEach(row => {
+    (PRODUCT_CATS[row.product_id] ||= []).push(row.category_id);
+  });
   SETTINGS = {};
   (setts.data || []).forEach(s => SETTINGS[s.key] = s.value);
   document.title = SETTINGS.shop_name || "Hooked Heaven";
@@ -649,6 +549,7 @@ function parseHash(){
                   subtype: mc[2] ? decodeURIComponent(mc[2]) : null };
   const mp = h.match(/^\/p\/(.+)$/);
   if(mp) return { kind:"page", slug: decodeURIComponent(mp[1]), subtype:null };
+  if(h === "/all") return { kind:"all", slug:null, subtype:null };
   return { kind:"home", slug:null, subtype:null };
 }
 function goHome(){
@@ -714,6 +615,11 @@ function renderShelfHead(){
       : `<a class="back" href="#/">&larr; All products</a>
          <h2>Category not found</h2><div class="rule"></div>`;
     head.className = "cat-head";
+  }else if(currentRoute.kind === "all"){
+    head.innerHTML = `<a class="back" href="#/">&larr; Back to home</a>
+      <h2>All products</h2>
+      <div class="rule"></div>`;
+    head.className = "cat-head";
   }else{
     head.innerHTML = `<div class="label">The collection</div>
       <h2>Every piece, made to order</h2>
@@ -734,7 +640,7 @@ function renderMenu(){
   document.getElementById("mnav").innerHTML = `
     <a href="#/" class="${currentRoute.kind==="home"?"on":""}">Home</a>
     ${catLinks ? `<div class="grp">Shop</div>${catLinks}` : ""}
-    <a href="#/" class="${currentRoute.kind==="home"?"on":""}">All Products</a>
+    <a href="#/all" class="${currentRoute.kind==="all"?"on":""}">All Products</a>
     ${pageLinks ? `<div class="grp">Information</div>${pageLinks}` : ""}`;
 }
 function openMenu(){
@@ -784,7 +690,7 @@ function subtypesIn(products){
 function categoryProducts(){
   if(currentRoute.kind !== "category") return PRODUCTS;
   const c = CATEGORIES.find(x => x.slug === currentRoute.slug);
-  return c ? PRODUCTS.filter(p => p.category_id === c.id) : [];
+  return c ? PRODUCTS.filter(p => (PRODUCT_CATS[p.id] || []).includes(c.id)) : [];
 }
 function renderFilters(){
   const box = document.getElementById("filters");
@@ -810,8 +716,10 @@ function visibleProducts(){
   const want = currentRoute.subtype.toLowerCase();
   return scope.filter(p => (p.subtype||"").trim().toLowerCase() === want);
 }
+const HOME_LIMIT = 8;
 function renderGrid(){
   const scope = visibleProducts();
+  document.getElementById("viewall").innerHTML = "";
   if(scope.length === 0){
     document.getElementById("grid").innerHTML = currentRoute.kind !== "category"
       ? '<div class="state">New pieces are on the hook — check back soon.</div>'
@@ -827,7 +735,12 @@ function renderGrid(){
       `<div class="state">No products match "${esc(q)}" — try a different search.</div>`;
     return;
   }
-  document.getElementById("grid").innerHTML = list.map(p => `
+  // The homepage shows a taste of the collection; everything else shows in full.
+  // Searching on the homepage searches the whole shop, so we don't cap that.
+  const capped = currentRoute.kind === "home" && !searchQuery.trim() && list.length > HOME_LIMIT;
+  const shown = capped ? list.slice(0, HOME_LIMIT) : list;
+
+  document.getElementById("grid").innerHTML = shown.map(p => `
     <button class="card" onclick="openProduct('${p.id}')">
       ${archOf(p)}
       <span class="name">${esc(p.name)}</span>
@@ -835,6 +748,13 @@ function renderGrid(){
       ${p.in_stock ? `<span class="price">${money(p.price)}</span>`
                    : `<span class="out">Currently unavailable</span>`}
     </button>`).join("");
+
+  document.getElementById("viewall").innerHTML = capped
+    ? `<div class="viewall">
+         <span class="count">Showing ${shown.length} of ${list.length} pieces</span>
+         <a class="btn" href="#/all">View all products</a>
+       </div>`
+    : "";
 }
 /* ---------- product ---------- */
 let current = null, qty = 1, selectedColor = null, galleryIdx = 0;
