@@ -359,8 +359,10 @@ function vProducts(){
         <button onclick="moveProd('${p.id}',1)" ${i===PRODS.length-1?"disabled":""} title="Move down">&#9660;</button>
       </div></td>
       <td class="c-thumb">${p.image_path?`<img class="thumb" src="${imgUrl(p.image_path)}">`:'<div class="thumb"></div>'}</td>
-      <td class="c-title"><strong>${esc(p.name)}</strong>${(()=>{ const c=CATS.find(x=>x.id===p.category_id);
-        return c?`<br><span style="color:var(--soft-ink);font-size:12px">${esc(c.name)}</span>`:""; })()}</td>
+      <td class="c-title"><strong>${esc(p.name)}</strong>${(()=>{
+        const c=CATS.find(x=>x.id===p.category_id);
+        const bits=[c?esc(c.name):null, p.subtype?esc(p.subtype):null].filter(Boolean);
+        return bits.length?`<br><span style="color:var(--soft-ink);font-size:12px">${bits.join(" \u00b7 ")}</span>`:""; })()}</td>
       <td>${money(p.price)}</td>
       <td><span class="pill ${p.in_stock?"p-yes":"p-no"}">${p.in_stock?"Available":"Unavailable"}</span></td>
       <td class="c-act">
@@ -383,6 +385,24 @@ function vProducts(){
       </div>
     </div>`:""}
     <div class="card">${PRODS.length?`<table><thead><tr><th></th><th></th><th>Name</th><th>Price</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="state">No products yet.</div>'}</div>`;
+}
+/* ---------- product types (filter chips on the storefront) ----------
+   Free text, but if the owner types a value that already exists with different
+   casing or spacing we reuse the existing spelling, so "Hair pins" and
+   "Hair Pins" don't end up as two separate buttons on the site. */
+function subtypeOptions(){
+  const seen = new Map();
+  PRODS.forEach(p=>{
+    const t = (p.subtype||"").trim();
+    if(t && !seen.has(t.toLowerCase())) seen.set(t.toLowerCase(), t);
+  });
+  return [...seen.values()].sort((a,b)=>a.localeCompare(b));
+}
+function normaliseSubtype(raw){
+  const t = (raw||"").trim();
+  if(!t) return null;
+  const match = subtypeOptions().find(x => x.toLowerCase() === t.toLowerCase());
+  return match || t;
 }
 /* ---------- ordering ----------
    sort_order values in the wild can be duplicated or missing (older rows, or
@@ -448,6 +468,13 @@ function edProd(id){
         ${CATS.map(c=>`<option value="${c.id}" ${p&&p.category_id===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
       </select></div>
     <div class="hint">Customers can browse this category from the menu on your site.</div>
+    <div class="fld"><label>Type (optional)</label>
+      <input id="f-subtype" list="subtype-options" value="${p?esc(p.subtype||""):""}" placeholder="e.g. Hair Pins">
+      <datalist id="subtype-options">
+        ${subtypeOptions().map(t=>`<option value="${esc(t)}"></option>`).join("")}
+      </datalist></div>
+    <div class="hint">Customers can filter by this inside the category page. Start typing to reuse
+      one you've used before \u2014 keeping the spelling the same keeps them grouped together.</div>
     <div class="fld"><label>Colours (optional)</label><input id="f-colors" value="${p?esc(p.colors||""):""}" placeholder="e.g. Pink, Cream, Sage"></div>
     <div class="hint">Separate with commas. Customers can pick one, but don't have to — this is not a stock count per colour.</div>
     <div class="fld"><label>Video link (optional)</label><input id="f-video" type="url" value="${p?esc(p.video_url||""):""}" placeholder="Paste an Instagram Reel or YouTube link"></div>
@@ -474,9 +501,11 @@ async function svProd(id){
     const colorsRaw = document.getElementById("f-colors").value.trim();
     const videoRaw = document.getElementById("f-video").value.trim();
     const catRaw = document.getElementById("f-cat").value;
+    const subRaw = document.getElementById("f-subtype").value.trim();
     const payload={name, price, description:desc||null, in_stock:stock,
                    colors: colorsRaw || null, video_url: videoRaw || null,
-                   category_id: catRaw || null};
+                   category_id: catRaw || null,
+                   subtype: normaliseSubtype(subRaw)};
     if(file){
       stage="uploading the photo";
       btn.textContent="Uploading photo…";
