@@ -91,14 +91,15 @@
                #/c/{slug}    one category
                #/p/{slug}    an info page (About / Returns / Contact)
    ============================================================ */
-let currentRoute = { kind:"home", slug:null };
+let currentRoute = { kind:"home", slug:null, subtype:null };
 function parseHash(){
   const h = (location.hash || "").replace(/^#/, "");
-  const mc = h.match(/^\/c\/(.+)$/);
-  if(mc) return { kind:"category", slug: decodeURIComponent(mc[1]) };
+  const mc = h.match(/^\/c\/([^\/]+)(?:\/(.+))?$/);
+  if(mc) return { kind:"category", slug: decodeURIComponent(mc[1]),
+                  subtype: mc[2] ? decodeURIComponent(mc[2]) : null };
   const mp = h.match(/^\/p\/(.+)$/);
-  if(mp) return { kind:"page", slug: decodeURIComponent(mp[1]) };
-  return { kind:"home", slug:null };
+  if(mp) return { kind:"page", slug: decodeURIComponent(mp[1]), subtype:null };
+  return { kind:"home", slug:null, subtype:null };
 }
 function goHome(){
   if(location.hash && location.hash !== "#/") location.hash = "#/";
@@ -113,6 +114,7 @@ function route(){
 
   if(currentRoute.kind === "page"){
     const pg = PAGES.find(p => p.slug === currentRoute.slug);
+    document.getElementById("filters").style.display = "none";
     home.style.display = "none";
     band.style.display = "none";
     page.style.display = "";
@@ -136,6 +138,7 @@ function route(){
   band.style.display = "";
   clearSearchSilently();
   renderShelfHead();
+  renderFilters();
   renderGrid();
   window.scrollTo({top:0});
   renderMenu();
@@ -147,7 +150,9 @@ function renderShelfHead(){
     head.innerHTML = c
       ? `<a class="back" href="#/">&larr; All products</a>
          <h2>${esc(c.name)}</h2>
-         ${c.tagline ? `<div class="tag">${esc(c.tagline)}</div>` : ""}
+         ${currentRoute.subtype
+             ? `<div class="tag">${esc(currentRoute.subtype)}</div>`
+             : (c.tagline ? `<div class="tag">${esc(c.tagline)}</div>` : "")}
          <div class="rule"></div>`
       : `<a class="back" href="#/">&larr; All products</a>
          <h2>Category not found</h2><div class="rule"></div>`;
@@ -227,6 +232,16 @@ window.addEventListener("hashchange", route);
   .cat-head h2{font-family:"Cormorant Garamond",Georgia,serif;font-weight:300;
     font-size:clamp(30px,4.6vw,46px);margin-top:12px;overflow-wrap:anywhere}
   .cat-head .tag{color:var(--soft-ink);font-size:14.5px;margin-top:10px}
+  /* ---------- category filter chips ---------- */
+  .filters{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;padding:0 0 4px;margin:0 auto 30px;justify-content:flex-start}
+  .filters::-webkit-scrollbar{display:none}
+  @media(min-width:680px){.filters{flex-wrap:wrap;justify-content:center;overflow-x:visible}}
+  .filters button{flex:0 0 auto;border:1px solid var(--hair);background:none;border-radius:999px;
+    padding:9px 17px;font-size:13px;color:var(--soft-ink);transition:.2s;white-space:nowrap}
+  .filters button:hover{border-color:var(--gold);color:var(--ink)}
+  .filters button.on{border-color:var(--forest);background:var(--sage-wash);
+    color:var(--forest);font-weight:500}
   /* ---------- search ---------- */
   .search-wrap{max-width:420px;margin:0 auto 40px;position:relative}
   .search-wrap input{width:100%;border:1px solid var(--hair);background:var(--paper);border-radius:999px;
@@ -421,6 +436,7 @@ window.addEventListener("hashchange", route);
     <h2>Every piece, made to order</h2>
     <div class="rule"></div>
   </div>
+  <div class="filters" id="filters" style="display:none"></div>
   <div class="search-wrap" id="search-wrap">
     <input id="search-input" type="search" placeholder="Search products…" oninput="onSearch()" autocomplete="off">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -618,14 +634,15 @@ async function loadAll(){
                #/c/{slug}    one category
                #/p/{slug}    an info page (About / Returns / Contact)
    ============================================================ */
-let currentRoute = { kind:"home", slug:null };
+let currentRoute = { kind:"home", slug:null, subtype:null };
 function parseHash(){
   const h = (location.hash || "").replace(/^#/, "");
-  const mc = h.match(/^\/c\/(.+)$/);
-  if(mc) return { kind:"category", slug: decodeURIComponent(mc[1]) };
+  const mc = h.match(/^\/c\/([^\/]+)(?:\/(.+))?$/);
+  if(mc) return { kind:"category", slug: decodeURIComponent(mc[1]),
+                  subtype: mc[2] ? decodeURIComponent(mc[2]) : null };
   const mp = h.match(/^\/p\/(.+)$/);
-  if(mp) return { kind:"page", slug: decodeURIComponent(mp[1]) };
-  return { kind:"home", slug:null };
+  if(mp) return { kind:"page", slug: decodeURIComponent(mp[1]), subtype:null };
+  return { kind:"home", slug:null, subtype:null };
 }
 function goHome(){
   if(location.hash && location.hash !== "#/") location.hash = "#/";
@@ -640,6 +657,7 @@ function route(){
 
   if(currentRoute.kind === "page"){
     const pg = PAGES.find(p => p.slug === currentRoute.slug);
+    document.getElementById("filters").style.display = "none";
     home.style.display = "none";
     band.style.display = "none";
     page.style.display = "";
@@ -663,6 +681,7 @@ function route(){
   band.style.display = "";
   clearSearchSilently();
   renderShelfHead();
+  renderFilters();
   renderGrid();
   window.scrollTo({top:0});
   renderMenu();
@@ -674,7 +693,9 @@ function renderShelfHead(){
     head.innerHTML = c
       ? `<a class="back" href="#/">&larr; All products</a>
          <h2>${esc(c.name)}</h2>
-         ${c.tagline ? `<div class="tag">${esc(c.tagline)}</div>` : ""}
+         ${currentRoute.subtype
+             ? `<div class="tag">${esc(currentRoute.subtype)}</div>`
+             : (c.tagline ? `<div class="tag">${esc(c.tagline)}</div>` : "")}
          <div class="rule"></div>`
       : `<a class="back" href="#/">&larr; All products</a>
          <h2>Category not found</h2><div class="rule"></div>`;
@@ -731,20 +752,58 @@ function clearSearch(){
 }
 function matchesSearch(p, q){
   if(!q) return true;
-  const hay = (p.name + " " + (p.description||"") + " " + (p.colors||"")).toLowerCase();
+  const hay = (p.name + " " + (p.description||"") + " " + (p.colors||"") + " " + (p.subtype||"")).toLowerCase();
   return hay.includes(q.toLowerCase().trim());
 }
-function visibleProducts(){
+/* ---------- category filter chips ----------
+   Built from the subtypes that actually exist in this category, so the shop
+   owner never manages a list anywhere — typing a new type on a product makes
+   its button appear here by itself. */
+function subtypesIn(products){
+  const seen = new Map();
+  products.forEach(p=>{
+    const t = (p.subtype||"").trim();
+    if(t && !seen.has(t.toLowerCase())) seen.set(t.toLowerCase(), t);
+  });
+  return [...seen.values()].sort((a,b)=>a.localeCompare(b));
+}
+function categoryProducts(){
   if(currentRoute.kind !== "category") return PRODUCTS;
   const c = CATEGORIES.find(x => x.slug === currentRoute.slug);
   return c ? PRODUCTS.filter(p => p.category_id === c.id) : [];
 }
+function renderFilters(){
+  const box = document.getElementById("filters");
+  if(currentRoute.kind !== "category"){ box.style.display = "none"; box.innerHTML = ""; return; }
+  const inCat = categoryProducts();
+  const types = subtypesIn(inCat);
+  // one type (or none) isn't worth a filter row
+  if(types.length < 2){ box.style.display = "none"; box.innerHTML = ""; return; }
+  const active = currentRoute.subtype;
+  const base = "#/c/" + encodeURIComponent(currentRoute.slug);
+  box.style.display = "";
+  box.innerHTML =
+    `<button class="${!active?"on":""}" onclick="location.hash='${base}'">All</button>` +
+    types.map(t => {
+      const on = active && active.toLowerCase() === t.toLowerCase();
+      return `<button class="${on?"on":""}"
+        onclick="location.hash='${base}/${encodeURIComponent(t)}'">${esc(t)}</button>`;
+    }).join("");
+}
+function visibleProducts(){
+  const scope = categoryProducts();
+  if(currentRoute.kind !== "category" || !currentRoute.subtype) return scope;
+  const want = currentRoute.subtype.toLowerCase();
+  return scope.filter(p => (p.subtype||"").trim().toLowerCase() === want);
+}
 function renderGrid(){
   const scope = visibleProducts();
   if(scope.length === 0){
-    document.getElementById("grid").innerHTML = currentRoute.kind === "category"
-      ? '<div class="state">Nothing in this category just yet — check back soon.</div>'
-      : '<div class="state">New pieces are on the hook — check back soon.</div>';
+    document.getElementById("grid").innerHTML = currentRoute.kind !== "category"
+      ? '<div class="state">New pieces are on the hook — check back soon.</div>'
+      : (currentRoute.subtype
+          ? `<div class="state">Nothing under ${esc(currentRoute.subtype)} right now.</div>`
+          : '<div class="state">Nothing in this category just yet — check back soon.</div>');
     return;
   }
   const q = searchQuery.trim();
