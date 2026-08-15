@@ -152,6 +152,11 @@
   .pgrid .empty{display:flex;align-items:center;justify-content:center;color:var(--soft-ink);font-size:10px;
     letter-spacing:.06em;text-transform:uppercase;text-align:center;padding:4px}
   .pcount{font-size:11.5px;color:var(--soft-ink);margin-bottom:14px}
+  .catpick{display:flex;flex-wrap:wrap;gap:8px;padding:4px 0 2px}
+  .catopt{display:flex;align-items:center;gap:7px;border:1px solid var(--hair);border-radius:999px;
+    padding:8px 14px;font-size:13.5px;cursor:pointer;background:var(--card)}
+  .catopt input{width:auto;margin:0}
+  .catopt:has(input:checked){border-color:var(--forest);background:var(--sage-wash);color:var(--forest)}
   /* ---------- reorder controls ---------- */
   .ord{display:flex;flex-direction:column;gap:3px}
   .ord button{width:30px;height:24px;border:1px solid var(--hair);background:var(--card);
@@ -218,7 +223,7 @@
 const SUPABASE_URL = "https://tztpscrdaryzgqzkxtgj.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_ZaUk5SrrJkRrcWnvCXClnQ_ErsmhGC8";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-let PRODS=[], ORDERS=[], ZONES=[], SET={}, view="products", LOAD_ERR=[], PIMAGES={}, CATS=[], PAGES=[];
+let PRODS=[], ORDERS=[], ZONES=[], SET={}, view="products", LOAD_ERR=[], PIMAGES={}, CATS=[], PAGES=[], PCATS={};
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function imgUrl(p){ if(!p) return ""; return sb.storage.from("product-images").getPublicUrl(p).data.publicUrl; }
 function money(n){ return (SET.currency||"PKR") + " " + Number(n).toLocaleString(); }
@@ -310,7 +315,15 @@ function showLogin(){ document.getElementById("login").style.display="flex"; doc
 function showApp(){ document.getElementById("login").style.display="none"; document.getElementById("app").classList.add("active"); loadAll(); }
 sb.auth.onAuthStateChange(e=>{ if(e==="SIGNED_OUT") showLogin(); });
 /* ---------- data ---------- */
-async function loadAll(){ LOAD_ERR=[]; await Promise.all([ldProds(),ldOrders(),ldZones(),ldSet(),ldImages(),ldCats(),ldPages()]); go(view); }
+async function loadAll(){ LOAD_ERR=[]; await Promise.all([ldProds(),ldOrders(),ldZones(),ldSet(),ldImages(),ldCats(),ldPages(),ldPCats()]); go(view); }
+/* product -> [category ids]. A product can now sit in several categories. */
+async function ldPCats(){ const r=await sb.from("product_categories").select("*");
+  if(r.error){ console.error(r.error); LOAD_ERR.push("product categories"); return; }
+  PCATS={}; (r.data||[]).forEach(row=>{ (PCATS[row.product_id] ||= []).push(row.category_id); }); }
+function catsOf(productId){ return PCATS[productId] || []; }
+function catNames(productId){
+  return catsOf(productId).map(id => (CATS.find(c=>c.id===id)||{}).name).filter(Boolean);
+}
 async function ldCats(){ const r=await sb.from("categories").select("*").order("sort_order");
   if(r.error){ console.error(r.error); LOAD_ERR.push("categories"); } else CATS=r.data; }
 async function ldPages(){ const r=await sb.from("shop_pages").select("*").order("sort_order");
@@ -360,8 +373,8 @@ function vProducts(){
       </div></td>
       <td class="c-thumb">${p.image_path?`<img class="thumb" src="${imgUrl(p.image_path)}">`:'<div class="thumb"></div>'}</td>
       <td class="c-title"><strong>${esc(p.name)}</strong>${(()=>{
-        const c=CATS.find(x=>x.id===p.category_id);
-        const bits=[c?esc(c.name):null, p.subtype?esc(p.subtype):null].filter(Boolean);
+        const names=catNames(p.id).map(esc);
+        const bits=[names.length?names.join(", "):null, p.subtype?esc(p.subtype):null].filter(Boolean);
         return bits.length?`<br><span style="color:var(--soft-ink);font-size:12px">${bits.join(" \u00b7 ")}</span>`:""; })()}</td>
       <td>${money(p.price)}</td>
       <td><span class="pill ${p.in_stock?"p-yes":"p-no"}">${p.in_stock?"Available":"Unavailable"}</span></td>
@@ -385,6 +398,24 @@ function vProducts(){
       </div>
     </div>`:""}
     <div class="card">${PRODS.length?`<table><thead><tr><th></th><th></th><th>Name</th><th>Price</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="state">No products yet.</div>'}</div>`;
+}
+/* Write only what changed: add the newly ticked categories, remove the unticked
+   ones. Untouched rows are left alone so we never churn the whole table. */
+async function syncProductCategories(productId, wantIds){
+  const have = catsOf(productId);
+  const toAdd = wantIds.filter(id => !have.includes(id));
+  const toRemove = have.filter(id => !wantIds.includes(id));
+  if(toAdd.length){
+    const r = await sb.from("product_categories")
+      .insert(toAdd.map(cid => ({ product_id:productId, category_id:cid })));
+    if(r.error) return r.error;
+  }
+  for(const cid of toRemove){
+    const r = await sb.from("product_categories").delete()
+      .eq("product_id", productId).eq("category_id", cid);
+    if(r.error) return r.error;
+  }
+  return null;
 }
 /* ---------- product types (filter chips on the storefront) ----------
    Free text, but if the owner types a value that already exists with different
@@ -462,12 +493,15 @@ function edProd(id){
     <div class="fld"><label>Price (${esc(SET.currency||"PKR")})</label><input id="f-price" type="number" min="0" step="1" value="${p?p.price:""}"></div>
     <div class="fld"><label>Short description</label><textarea id="f-desc" rows="3" placeholder="e.g. Pair of sunflowers · cotton yarn">${p?esc(p.description||""):""}</textarea></div>
     <div class="hint">The first two lines show on the shop page — the full text appears when a customer taps the product.</div>
-    <div class="fld"><label>Category</label>
-      <select id="f-cat">
-        <option value="">No category (shows under All Products only)</option>
-        ${CATS.map(c=>`<option value="${c.id}" ${p&&p.category_id===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
-      </select></div>
-    <div class="hint">Customers can browse this category from the menu on your site.</div>
+    <div class="fld"><label>Categories</label>
+      ${CATS.length ? `<div class="catpick">
+        ${CATS.map(c=>`<label class="catopt">
+          <input type="checkbox" class="f-cat" value="${c.id}" ${p&&catsOf(p.id).includes(c.id)?"checked":""}>
+          <span>${esc(c.name)}</span></label>`).join("")}
+      </div>` : `<div class="hint" style="margin:0">No categories yet — add one in the Categories tab.</div>`}</div>
+    <div class="hint">Tick every category this product belongs to. A cherry charm can be a bag
+      hanging and a hair accessory at once — it will show in both. Leave all unticked and it
+      only appears under All Products.</div>
     <div class="fld"><label>Type (optional)</label>
       <input id="f-subtype" list="subtype-options" value="${p?esc(p.subtype||""):""}" placeholder="e.g. Hair Pins">
       <datalist id="subtype-options">
@@ -500,11 +534,10 @@ async function svProd(id){
     if(!s || !s.session) throw new Error("You've been signed out. Please sign in again.");
     const colorsRaw = document.getElementById("f-colors").value.trim();
     const videoRaw = document.getElementById("f-video").value.trim();
-    const catRaw = document.getElementById("f-cat").value;
+    const wantCats = [...document.querySelectorAll(".f-cat")].filter(b=>b.checked).map(b=>b.value);
     const subRaw = document.getElementById("f-subtype").value.trim();
     const payload={name, price, description:desc||null, in_stock:stock,
                    colors: colorsRaw || null, video_url: videoRaw || null,
-                   category_id: catRaw || null,
                    subtype: normaliseSubtype(subRaw)};
     if(file){
       stage="uploading the photo";
@@ -517,7 +550,16 @@ async function svProd(id){
                  : await sb.from("products").insert({...payload, sort_order:nextSort(PRODS)}).select();
     if(r.error) throw r.error;
     const savedId = id || (r.data && r.data[0] && r.data[0].id);
-    closeSheet(); await ldProds(); vProducts();
+
+    // Categories live in their own table, so they can only be linked once the
+    // product row exists. Only the differences are written.
+    if(savedId){
+      stage = "saving the categories";
+      const err2 = await syncProductCategories(savedId, wantCats);
+      if(err2) throw err2;
+    }
+
+    closeSheet(); await Promise.all([ldProds(), ldPCats()]); vProducts();
     if(!id && savedId) edPhotos(savedId);  // brand-new product: offer photos immediately
   }catch(e){
     console.error("[svProd]",stage,e);
@@ -600,7 +642,7 @@ function slugify(t){
 }
 function vCats(){
   const rows = CATS.map(c=>{
-    const n = PRODS.filter(p=>p.category_id===c.id).length;
+    const n = PRODS.filter(p=>catsOf(p.id).includes(c.id)).length;
     return `<tr>
       <td class="c-title"><strong>${esc(c.name)}</strong>${c.tagline?`<br><span style="color:var(--soft-ink);font-size:12px">${esc(c.tagline)}</span>`:""}</td>
       <td>${n} product${n===1?"":"s"}</td>
@@ -608,7 +650,7 @@ function vCats(){
         <button class="btn ghost sm" onclick="edCat('${c.id}')">Edit</button>
         <button class="btn danger sm" onclick="delCat('${c.id}')">Delete</button>
       </td></tr>`;}).join("");
-  const uncategorised = PRODS.filter(p=>!p.category_id).length;
+  const uncategorised = PRODS.filter(p=>catsOf(p.id).length===0).length;
   document.getElementById("main").innerHTML = `
     <div class="head"><h1>Categories</h1><button class="btn forest" onclick="edCat()">+ Add category</button></div>
     <div class="card" style="background:var(--mist);border:none;font-size:13px">
@@ -730,14 +772,17 @@ async function svCat(id){
   }
 }
 async function delCat(id){
-  const n = PRODS.filter(p=>p.category_id===id).length;
-  const warn = n
-    ? `Delete this category?\n\n${n} product${n===1?"":"s"} will stay on your site but lose ${n===1?"its":"their"} category — they'll still show under All Products.`
+  const inCat = PRODS.filter(p=>catsOf(p.id).includes(id));
+  // a product only becomes uncategorised if this was its last category
+  const orphaned = inCat.filter(p=>catsOf(p.id).length===1).length;
+  const warn = inCat.length
+    ? `Delete this category?\n\n${inCat.length} product${inCat.length===1?"":"s"} will stay on your site.`
+      + (orphaned ? `\n\n${orphaned} of them ${orphaned===1?"has":"have"} no other category, so ${orphaned===1?"it":"they"} will only show under All Products.` : "")
     : "Delete this category?";
   if(!confirm(warn)) return;
   const r=await sb.from("categories").delete().eq("id",id);
   if(r.error){ alert("Could not delete. "+errText(r.error)); return; }
-  await Promise.all([ldCats(), ldProds()]);
+  await Promise.all([ldCats(), ldProds(), ldPCats()]);
   vCats();
 }
 /* ============================================================
