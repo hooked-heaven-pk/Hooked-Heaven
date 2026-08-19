@@ -540,10 +540,14 @@ function edProd(id){
           :`You can add up to 4 photos for the product page once this is saved.`}</div>
     <div class="fld"><label>Name</label><input id="f-name" value="${p?esc(p.name):""}" placeholder="e.g. Sunflower Bag Charm"></div>
     <div class="fld"><label>Price (${esc(SET.currency||"PKR")})</label><input id="f-price" type="number" min="0" step="1" value="${p?p.price:""}"></div>
-    <div class="fld"><label>Stock (pieces you have)</label><input id="f-stockn" type="number" step="1" value="${p?(p.stock??0):0}"></div>
-    <div class="hint">${p && sizesOf(p.id).length
-      ? `This product has sizes, so each size keeps its own price and stock — use the <strong>Sizes</strong> button. These two boxes are ignored while sizes exist.`
-      : `Customers can't order once this reaches 0. Update it whenever you make or sell a piece.`}</div>
+    ${p && sizesOf(p.id).length ? `
+      <input type="hidden" id="f-stockn" value="${p.stock??0}">
+      <div class="hint">This product has sizes, so each size keeps its own price and stock.
+        Use the <strong>Sizes</strong> button to change them. The price above is only used
+        if you remove every size.</div>`
+    : `
+      <div class="fld"><label>Stock (pieces you have)</label><input id="f-stockn" type="number" step="1" value="${p?(p.stock??0):0}"></div>
+      <div class="hint">Customers can't order once this reaches 0. Update it whenever you make or sell a piece.</div>`}
     <div class="fld"><label>Short description</label><textarea id="f-desc" rows="3" placeholder="e.g. Pair of sunflowers · cotton yarn">${p?esc(p.description||""):""}</textarea></div>
     <div class="hint">The first two lines show on the shop page — the full text appears when a customer taps the product.</div>
     <div class="fld"><label>Categories</label>
