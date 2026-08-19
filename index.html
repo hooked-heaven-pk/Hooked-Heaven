@@ -11,7 +11,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
-  color-scheme:light;
+  /* "only light" (not just "light") is what makes Android Chrome's Auto Dark Theme
+     and similar browser-side inversions leave the page alone. Plain "light" here
+     was silently overriding the <meta color-scheme> tag above. */
+  color-scheme:only light;
   --paper:#FAF8F2;
   --ink:#2D3323;
   --soft-ink:#6F6B57;
@@ -31,7 +34,9 @@
     background-size:300px 300px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{max-width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%}
+  /* an explicit background on <html> too — if the browser ever paints outside
+     <body> (overscroll, safe areas) it must not fall back to a dark canvas */
+  html,body{max-width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%;background:#FAF8F2}
   html{scroll-behavior:smooth}
   body{background:var(--paper);color:var(--ink);font-family:"Jost",system-ui,sans-serif;font-weight:300;line-height:1.7}
   img{display:block;max-width:100%}
@@ -51,8 +56,13 @@
   .nav .in{max-width:1140px;margin:0 auto;padding:14px 32px;display:flex;align-items:center;justify-content:space-between;gap:16px}
   @media(max-width:640px){.nav .in{padding:12px 20px}}
   .mark{display:flex;align-items:center;gap:11px;background:none;border:none;padding:0}
-  .mark-logo{width:38px;height:38px;border-radius:50%;overflow:hidden;flex:0 0 38px;background:var(--mist)}
-  .mark-logo img{width:100%;height:100%;object-fit:cover}
+  /* object-fit:cover cropped the logo to fill the circle — a wordmark lost its
+     left and right edges. contain + a little padding keeps the whole logo visible
+     whatever its aspect ratio, and a paper background stops a transparent PNG
+     from disappearing. */
+  .mark-logo{width:42px;height:42px;border-radius:50%;overflow:hidden;flex:0 0 42px;
+    background:var(--paper);display:flex;align-items:center;justify-content:center}
+  .mark-logo img{width:100%;height:100%;object-fit:contain;padding:4px}
   .mark span{font-family:"Cormorant Garamond",Georgia,serif;font-size:21px;letter-spacing:.03em;font-weight:400}
   .mark em{font-style:italic;color:var(--forest)}
   .bag{background:none;border:none;padding:6px 0;font-size:12px;letter-spacing:.13em;text-transform:uppercase;
@@ -569,7 +579,6 @@ function route(){
   const home = document.getElementById("view-home");
   const page = document.getElementById("view-page");
   const band = document.getElementById("band");
-
   if(currentRoute.kind === "page"){
     const pg = PAGES.find(p => p.slug === currentRoute.slug);
     document.getElementById("filters").style.display = "none";
@@ -588,7 +597,6 @@ function route(){
     renderMenu();
     return;
   }
-
   // home and category both show the product grid
   page.style.display = "none";
   page.innerHTML = "";
@@ -739,7 +747,6 @@ function renderGrid(){
   // Searching on the homepage searches the whole shop, so we don't cap that.
   const capped = currentRoute.kind === "home" && !searchQuery.trim() && list.length > HOME_LIMIT;
   const shown = capped ? list.slice(0, HOME_LIMIT) : list;
-
   document.getElementById("grid").innerHTML = shown.map(p => `
     <button class="card" onclick="openProduct('${p.id}')">
       ${archOf(p)}
@@ -748,7 +755,6 @@ function renderGrid(){
       ${p.in_stock ? `<span class="price">${money(p.price)}</span>`
                    : `<span class="out">Currently unavailable</span>`}
     </button>`).join("");
-
   document.getElementById("viewall").innerHTML = capped
     ? `<div class="viewall">
          <span class="count">Showing ${shown.length} of ${list.length} pieces</span>
@@ -792,7 +798,6 @@ function drawProduct(){
          </div>
        </div>`
     : archOf(p, photos[0]);
-
   const colors = colorList(p);
   const colorBlock = colors.length ? `
     <div class="colors">
@@ -802,13 +807,11 @@ function drawProduct(){
           data-c="${esc(c)}" onclick="pickColor('${esc(c).replace(/'/g,"\\'")}')" >${esc(c)}</button>`).join("")}
       </div>
     </div>` : "";
-
   const videoBlock = p.video_url ? `
     <a class="vid-link" href="${esc(p.video_url)}" target="_blank" rel="noopener">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>
       ${esc(p.video_url)}
     </a>` : "";
-
   document.getElementById("psheet").innerHTML = `
     <button class="x" onclick="closeProduct()">&times;</button>
     <div class="detail">
