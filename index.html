@@ -69,6 +69,16 @@
     font-weight:500;color:var(--ink);border-bottom:1px solid transparent;transition:border-color .25s}
   .bag:hover{border-color:var(--gold)}
   .bag .n{color:var(--soft-ink)}
+  /* ---------- sale banner ---------- */
+  .sale-bar{display:none;background:var(--forest);color:var(--paper);text-align:center;
+    padding:10px 20px;font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;
+    font-weight:500;line-height:1.5;overflow-wrap:anywhere}
+  .sale-bar.on{display:block}
+  .sale-bar .dates{display:block;font-size:10px;letter-spacing:.1em;opacity:.8;
+    text-transform:none;font-weight:400;margin-top:2px}
+  /* struck-through original price, shown next to the sale price */
+  .was{color:var(--soft-ink);text-decoration:line-through;margin-right:6px;font-size:.92em}
+  .srow.save{color:var(--forest)}
   /* ---------- hero ---------- */
   /* padding-top/bottom only — a bare `padding` here silently overrode .wrap's
      left/right padding, which is why the hero and grid sat flush to the screen edge */
@@ -328,6 +338,7 @@
     <button class="bag" onclick="openBag()">Bag <span class="n" id="bag-n">(0)</span></button>
   </div>
 </nav>
+<div class="sale-bar" id="sale-bar"></div>
 <div id="view-home">
 <header class="wrap hero doodle">
   <div>
@@ -410,6 +421,39 @@ const BAG_KEY = "hh_bag_v1";
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const money = n => (SETTINGS.currency || "PKR") + " " + Number(n).toLocaleString();
 const subtotal = () => BAG.reduce((s,i)=> s + (i.in_stock === false ? 0 : i.price*i.quantity), 0);
+/* ---------- sale ----------
+   Display only. The real discount is worked out by place_order in the
+   database — this just has to agree with it, so the customer transfers the
+   right amount. Both sides read the same settings, judge the dates in
+   Pakistan time, take the discount off goods (never delivery), and round to
+   whole rupees. Change one and you must change the other. */
+function karachiToday(){
+  return new Intl.DateTimeFormat("en-CA", { timeZone:"Asia/Karachi",
+    year:"numeric", month:"2-digit", day:"2-digit" }).format(new Date());
+}
+function saleInfo(){
+  if(String(SETTINGS.sale_active || "0") !== "1") return null;
+  const pct = Number(SETTINGS.sale_percent || 0);
+  if(!(pct > 0 && pct <= 100)) return null;
+  const today = karachiToday();
+  const from = (SETTINGS.sale_start || "").trim();
+  const to   = (SETTINGS.sale_end   || "").trim();
+  if(from && today < from) return null;   // a blank date means no limit on that side
+  if(to   && today > to)   return null;
+  return { pct, from, to };
+}
+const salePct = () => { const s = saleInfo(); return s ? s.pct : 0; };
+const saleUnit = v => { const p = salePct(); return p ? Math.round(Number(v) * (100 - p)) / 100 : Number(v); };
+const discountAmount = () => { const p = salePct(); return p ? Math.round(subtotal() * p / 100) : 0; };
+const goodsTotal = () => subtotal() - discountAmount();
+/* one price, rendered with the sale struck through when one is running */
+function priceHtml(v, cls){
+  const p = salePct();
+  const c = cls || "price";
+  return p
+    ? `<span class="${c}"><s class="was">${money(v)}</s>${money(saleUnit(v))}</span>`
+    : `<span class="${c}">${money(v)}</span>`;
+}
 const countBag = () => document.getElementById("bag-n").textContent = "(" + BAG.reduce((s,i)=>s+i.quantity,0) + ")";
 function imgUrl(path){ if(!path) return ""; return sb.storage.from("product-images").getPublicUrl(path).data.publicUrl; }
 function archOf(p, src){
@@ -516,6 +560,7 @@ async function loadAll(){
   SETTINGS = {};
   (setts.data || []).forEach(s => SETTINGS[s.key] = s.value);
   document.title = SETTINGS.shop_name || "Hooked Heaven";
+  renderSaleBar();
   const ig = (SETTINGS.instagram_handle || "").replace("@","");
   document.getElementById("ig-link").href = ig ? `https://instagram.com/${ig}` : "#";
   // Logo: shown in nav + footer once uploaded via the dashboard
@@ -545,6 +590,19 @@ async function loadAll(){
   reconcileBag();
   renderMenu();
   route();
+}
+function renderSaleBar(){
+  const bar = document.getElementById("sale-bar");
+  const sale = saleInfo();
+  if(!sale){ bar.className = "sale-bar"; bar.innerHTML = ""; return; }
+  const custom = (SETTINGS.sale_banner_text || "").trim();
+  // an end date is worth saying out loud; the start date has already passed
+  const until = sale.to
+    ? `<span class="dates">Until ${new Date(sale.to + "T00:00:00").toLocaleDateString(undefined,
+        { day:"numeric", month:"long" })}</span>`
+    : "";
+  bar.className = "sale-bar on";
+  bar.innerHTML = esc(custom || `${sale.pct}% off everything`) + until;
 }
 /* ============================================================
    ROUTING  —  #/            home (all products)
@@ -752,7 +810,7 @@ function renderGrid(){
       ${archOf(p)}
       <span class="name">${esc(p.name)}</span>
       <span class="spec">${esc(p.description || "")}</span>
-      ${p.in_stock ? `<span class="price">${money(p.price)}</span>`
+      ${p.in_stock ? priceHtml(p.price)
                    : `<span class="out">Currently unavailable</span>`}
     </button>`).join("");
   document.getElementById("viewall").innerHTML = capped
@@ -819,7 +877,9 @@ function drawProduct(){
       <div class="body">
         <h3>${esc(p.name)}</h3>
         <div class="spec">${esc(p.description || "")}</div>
-        <div class="price">${money(p.price)}</div>
+        <div class="price">${salePct()
+          ? `<s class="was">${money(p.price)}</s>${money(saleUnit(p.price))}`
+          : money(p.price)}</div>
         ${videoBlock}
         ${colorBlock}
         ${p.in_stock ? `
@@ -906,7 +966,8 @@ function drawBag(){
       <div style="flex:1;min-width:0">
         <div class="nm">${esc(i.name)}</div>
         ${i.selected_color ? `<div style="font-size:11.5px;color:var(--soft-ink);margin-top:1px">${esc(i.selected_color)}</div>` : ""}
-        <div class="pr">${i.in_stock === false ? "Currently unavailable" : money(i.price)}</div>
+        <div class="pr">${i.in_stock === false ? "Currently unavailable"
+          : (salePct() ? `<s class="was">${money(i.price)}</s>${money(saleUnit(i.price))}` : money(i.price))}</div>
         <div class="row">
           <button onclick="bagStep('${k}',-1)">&minus;</button>
           <span style="font-size:13px">${i.quantity}</span>
@@ -915,8 +976,11 @@ function drawBag(){
         <button class="rm" onclick="bagRemove('${k}')">Remove</button>
       </div>
     </div>`;}).join("");
+  const disc = discountAmount();
   foot.innerHTML = `
     <div class="srow"><span>Subtotal</span><span>${money(subtotal())}</span></div>
+    ${disc ? `<div class="srow save"><span>Sale &minus;${salePct()}%</span>
+        <span>&minus; ${money(disc)}</span></div>` : ""}
     <div class="srow" style="font-size:12px">Delivery calculated at checkout</div>
     ${bagBlocked() ? `<div class="note" style="margin-top:0;margin-bottom:14px">One of these isn't
         available right now — please remove it to continue.</div>` : ""}
@@ -962,8 +1026,10 @@ function drawCheckout(){
     <div class="hint" style="margin-top:-10px">Upload a screenshot of your payment before placing the order.</div>
     <div style="border-top:1px solid var(--hair);padding-top:18px;margin-top:6px">
       <div class="srow"><span>Subtotal</span><span>${money(subtotal())}</span></div>
+      ${discountAmount() ? `<div class="srow save"><span>Sale &minus;${salePct()}%</span>
+          <span>&minus; ${money(discountAmount())}</span></div>` : ""}
       <div class="srow"><span>Delivery</span><span id="k-ship">—</span></div>
-      <div class="srow total"><span>Total</span><span id="k-total">${money(subtotal())}</span></div>
+      <div class="srow total"><span>Total</span><span id="k-total">${money(goodsTotal())}</span></div>
     </div>
     <button class="btn wide" id="k-go" onclick="submitOrder()">Place order</button>
     <div class="err" id="k-err" style="display:none"></div>`;
@@ -987,7 +1053,7 @@ function totals(){
   const z = selectedZone();
   const fee = z ? Number(z.fee) : 0;
   document.getElementById("k-ship").textContent = z ? money(fee) : "—";
-  document.getElementById("k-total").textContent = money(subtotal() + fee);
+  document.getElementById("k-total").textContent = money(goodsTotal() + fee);
 }
 let pendingOrderNumber = null;
 async function submitOrder(){
