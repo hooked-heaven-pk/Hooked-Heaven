@@ -11,7 +11,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
-  color-scheme:light;
+  /* "only light" (not just "light") is what makes Android Chrome's Auto Dark Theme
+     and similar browser-side inversions leave the page alone. Plain "light" here
+     was silently overriding the <meta color-scheme> tag above. */
+  color-scheme:only light;
   --paper:#FAF8F2;
   --ink:#2D3323;
   --soft-ink:#6F6B57;
@@ -31,7 +34,9 @@
   --warn:#8A6D2F;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{max-width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%}
+  /* an explicit background on <html> too — if the browser ever paints outside
+     <body> (overscroll, safe areas) it must not fall back to a dark canvas */
+  html,body{max-width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%;background:#FAF8F2}
   body{background:var(--paper);color:var(--ink);font-family:"Jost",system-ui,sans-serif;font-weight:300;line-height:1.55}
   button,input,select,textarea{font-family:inherit}
   .serif{font-family:"Cormorant Garamond",Georgia,serif;font-weight:400}
@@ -550,7 +555,6 @@ async function svProd(id){
                  : await sb.from("products").insert({...payload, sort_order:nextSort(PRODS)}).select();
     if(r.error) throw r.error;
     const savedId = id || (r.data && r.data[0] && r.data[0].id);
-
     // Categories live in their own table, so they can only be linked once the
     // product row exists. Only the differences are written.
     if(savedId){
@@ -558,7 +562,6 @@ async function svProd(id){
       const err2 = await syncProductCategories(savedId, wantCats);
       if(err2) throw err2;
     }
-
     closeSheet(); await Promise.all([ldProds(), ldPCats()]); vProducts();
     if(!id && savedId) edPhotos(savedId);  // brand-new product: offer photos immediately
   }catch(e){
