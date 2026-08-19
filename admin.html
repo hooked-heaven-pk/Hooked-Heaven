@@ -203,6 +203,7 @@
     <nav>
       <button data-v="products"   onclick="go('products')">Products</button>
       <button data-v="categories" onclick="go('categories')">Categories</button>
+      <button data-v="sale"       onclick="go('sale')">Sale</button>
       <button data-v="orders"     onclick="go('orders')">Orders</button>
       <button data-v="shipping"   onclick="go('shipping')">Delivery areas</button>
       <button data-v="pages"      onclick="go('pages')">Pages</button>
@@ -354,7 +355,7 @@ function go(v){
   view=v;
   document.querySelectorAll(".side nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
   side(false);
-  ({products:vProducts, categories:vCats, orders:vOrders, shipping:vZones,
+  ({products:vProducts, categories:vCats, sale:vSale, orders:vOrders, shipping:vZones,
     pages:vPages, settings:vSettings}[v])();
   if(LOAD_ERR.length){
     document.getElementById("main").insertAdjacentHTML("afterbegin",
@@ -837,6 +838,117 @@ async function svPage(slug){
   }
 }
 /* ============================================================
+   SALE
+   ------------------------------------------------------------
+   The discount itself is applied by place_order in the database.
+   This screen only edits the settings it reads, so the site and
+   the order total can never disagree.
+   ============================================================ */
+const SALE_KEYS = ["sale_active","sale_percent","sale_start","sale_end","sale_banner_text"];
+/* dates are judged in Pakistan time, the same as the database does */
+function karachiToday(){
+  return new Intl.DateTimeFormat("en-CA", { timeZone:"Asia/Karachi",
+    year:"numeric", month:"2-digit", day:"2-digit" }).format(new Date());
+}
+/* what the customer is seeing right now — the four states the owner cares about */
+function saleState(){
+  const pct = Number(SET.sale_percent || 0);
+  const from = (SET.sale_start || "").trim();
+  const to = (SET.sale_end || "").trim();
+  const today = karachiToday();
+  if(String(SET.sale_active || "0") !== "1") return { on:false, label:"Off", why:"The switch below is off, so customers pay full price." };
+  if(!(pct > 0 && pct <= 100)) return { on:false, label:"Off", why:"Set a discount between 1 and 100 to start a sale." };
+  if(from && today < from) return { on:false, label:"Scheduled", why:`Starts on ${from}. Nothing changes on the site until then.` };
+  if(to && today > to) return { on:false, label:"Finished", why:`Ended on ${to}. Customers are back to full price.` };
+  return { on:true, label:"Running", why:`Customers are getting ${pct}% off everything right now.`
+    + (to ? ` This stops by itself after ${to}.` : " There is no end date, so it runs until you switch it off.") };
+}
+function vSale(){
+  const s = saleState();
+  const pct = SET.sale_percent || "";
+  document.getElementById("main").innerHTML = `
+    <div class="head"><h1>Sale</h1></div>
+    <div class="card" style="background:${s.on?"var(--sage-wash)":"var(--mist)"};border:none">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+        <span class="pill ${s.on?"p-yes":"p-no"}">${s.label}</span>
+        <strong style="font-size:15px">${s.on?`${pct}% off everything`:"No sale running"}</strong>
+      </div>
+      <div style="font-size:13px;color:var(--soft-ink)">${esc(s.why)}</div>
+    </div>
+    <div class="card"><div class="grid1">
+      <div class="check">
+        <input type="checkbox" id="sl-active" ${String(SET.sale_active||"0")==="1"?"checked":""}>
+        <label style="margin:0;text-transform:none;font-weight:400;font-size:14px;letter-spacing:0" for="sl-active">Run a sale</label>
+      </div>
+      <div class="fld"><label>Discount (%)</label>
+        <input id="sl-percent" type="number" min="1" max="100" step="1" value="${esc(pct)}" placeholder="e.g. 15"></div>
+      <div class="hint" style="margin-top:-6px">Taken off the products only — delivery is never discounted.</div>
+      <div class="row2">
+        <div class="fld"><label>Start date</label><input id="sl-start" type="date" value="${esc(SET.sale_start||"")}"></div>
+        <div class="fld"><label>End date</label><input id="sl-end" type="date" value="${esc(SET.sale_end||"")}"></div>
+      </div>
+      <div class="hint" style="margin-top:-6px">Both days are included, Pakistan time. The sale starts and stops
+        by itself — you don't need to come back and switch it off. Leave a date empty for no limit.</div>
+      <div class="fld"><label>Banner wording (optional)</label>
+        <input id="sl-text" value="${esc(SET.sale_banner_text||"")}" placeholder="15% off everything"></div>
+      <div class="hint" style="margin-top:-6px">Shown across the top of your site. Leave empty and it writes itself
+        from the discount above.</div>
+      <div>
+        <button class="btn forest" id="sl-save" onclick="svSale()">Save sale</button>
+        <span id="sl-msg" style="display:none;font-size:13px;margin-left:10px"></span>
+      </div>
+      <div class="err" id="sl-err" style="display:none"></div>
+    </div></div>
+    <div class="card" style="background:var(--mist);border:none;font-size:13px">
+      Orders already placed keep the price they were placed at. Switching the sale off later
+      never changes what an old order says you were paid.
+    </div>`;
+}
+async function svSale(){
+  const active = document.getElementById("sl-active").checked;
+  const pctRaw = document.getElementById("sl-percent").value.trim();
+  const from = document.getElementById("sl-start").value;
+  const to = document.getElementById("sl-end").value;
+  const text = document.getElementById("sl-text").value.trim();
+  const err = document.getElementById("sl-err"), btn = document.getElementById("sl-save");
+  const msg = document.getElementById("sl-msg");
+  err.style.display = "none"; msg.style.display = "none";
+  const pct = Number(pctRaw);
+  // only validate the numbers when the sale is actually being switched on,
+  // so the owner can save a half-filled draft
+  if(active){
+    if(!pctRaw || isNaN(pct) || pct <= 0 || pct > 100){
+      showErr(err,"Enter a discount between 1 and 100 to run a sale."); return;
+    }
+    if(from && to && to < from){
+      showErr(err,"The end date is before the start date."); return;
+    }
+  }
+  btn.disabled = true; btn.textContent = "Saving…";
+  try{
+    const values = {
+      sale_active: active ? "1" : "0",
+      sale_percent: pctRaw && !isNaN(pct) ? String(pct) : "0",
+      sale_start: from || "",
+      sale_end: to || "",
+      sale_banner_text: text
+    };
+    for(const k of SALE_KEYS){
+      const r = await sb.from("shop_settings").upsert({ key:k, value:values[k] });
+      if(r.error) throw r.error;
+    }
+    await ldSet();
+    vSale();
+    const m = document.getElementById("sl-msg");
+    m.textContent = "Saved"; m.style.color = "var(--ok)"; m.style.display = "inline";
+    setTimeout(()=>{ if(m) m.style.display = "none"; }, 2000);
+  }catch(e){
+    console.error("[svSale]",e);
+    showErr(err,"Could not save the sale.",errText(e));
+    btn.disabled = false; btn.textContent = "Save sale";
+  }
+}
+/* ============================================================
    ORDERS
    ============================================================ */
 const STATUSES=["pending","confirmed","shipped","completed","cancelled"];
@@ -876,6 +988,10 @@ async function viewOrder(id){
       <p style="color:var(--soft-ink);font-size:12.5px;margin-top:4px">Area: ${esc(o.shipping_zone_name||"—")}</p>
       <table>
         ${items}
+        ${Number(o.discount_amount) > 0
+          ? `<tr style="color:var(--forest)"><td style="padding-top:8px">Sale &minus;${Number(o.discount_percent)}%</td>
+               <td style="text-align:right;padding-top:8px">&minus; ${money(o.discount_amount)}</td></tr>`
+          : ""}
         <tr><td style="padding-top:8px">Delivery</td><td style="text-align:right;padding-top:8px">${money(o.shipping_fee)}</td></tr>
         <tr><td><strong>Total</strong></td><td style="text-align:right"><strong>${money(o.total_amount)}</strong></td></tr>
       </table>
