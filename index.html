@@ -223,6 +223,12 @@
     font-size:13px;color:var(--ink);transition:.2s}
   .chip:hover{border-color:var(--gold)}
   .chip.on{border-color:var(--forest);background:var(--sage-wash);color:var(--forest);font-weight:500}
+  /* ---------- sizes ---------- */
+  .chip .plus{color:var(--soft-ink);font-size:.86em;margin-left:5px}
+  .chip.on .plus{color:var(--forest)}
+  .chip:disabled{opacity:.45;cursor:not-allowed;text-decoration:line-through}
+  .chip:disabled:hover{border-color:var(--hair)}
+  .pick-note{font-size:11.5px;color:var(--walnut);margin-bottom:14px}
   /* ---------- video link ---------- */
   .vid-link{display:inline-flex;align-items:flex-start;gap:6px;font-size:12px;
     color:var(--forest);text-decoration:underline;text-underline-offset:2px;
@@ -415,7 +421,7 @@
 const SUPABASE_URL = "https://tztpscrdaryzgqzkxtgj.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_ZaUk5SrrJkRrcWnvCXClnQ_ErsmhGC8";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-let PRODUCTS = [], ZONES = [], SETTINGS = {}, BAG = [], PRODUCT_IMAGES = {}, CATEGORIES = [], PAGES = [], PRODUCT_CATS = {};
+let PRODUCTS = [], ZONES = [], SETTINGS = {}, BAG = [], PRODUCT_IMAGES = {}, CATEGORIES = [], PAGES = [], PRODUCT_CATS = {}, PRODUCT_SIZES = {};
 const BAG_KEY = "hh_bag_v1";
 /* ---------- helpers ---------- */
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -454,6 +460,17 @@ function priceHtml(v, cls){
     ? `<span class="${c}"><s class="was">${money(v)}</s>${money(saleUnit(v))}</span>`
     : `<span class="${c}">${money(v)}</span>`;
 }
+/* a product with sizes spans a range, so the grid shows both ends */
+function cardPriceHtml(p){
+  if(!p.in_stock) return `<span class="out">Currently unavailable</span>`;
+  if(soldOut(p)) return `<span class="out">Sold out</span>`;
+  const { min, max } = priceRange(p);
+  if(min === max) return priceHtml(min);
+  const pct = salePct();
+  return pct
+    ? `<span class="price"><s class="was">${money(min)}–${money(max)}</s>${money(saleUnit(min))}–${money(saleUnit(max))}</span>`
+    : `<span class="price">${money(min)} – ${money(max)}</span>`;
+}
 const countBag = () => document.getElementById("bag-n").textContent = "(" + BAG.reduce((s,i)=>s+i.quantity,0) + ")";
 function imgUrl(path){ if(!path) return ""; return sb.storage.from("product-images").getPublicUrl(path).data.publicUrl; }
 function archOf(p, src){
@@ -462,6 +479,29 @@ function archOf(p, src){
 }
 function colorList(p){
   return String(p.colors||"").split(",").map(c=>c.trim()).filter(Boolean);
+}
+/* ---------- sizes & stock ----------
+   A product either has sizes (each with its own price and stock) or it has
+   none (one price and one stock number on the product itself). Colours never
+   split stock — the owner buys more yarn instead. */
+const sizesOf = p => PRODUCT_SIZES[p.id] || [];
+const sizeById = (p, id) => sizesOf(p).find(s => s.id === id) || null;
+const inStockSizes = p => sizesOf(p).filter(s => Number(s.stock) > 0);
+/* the owner's "Available to order" switch is separate from running out */
+function soldOut(p){
+  const sizes = sizesOf(p);
+  return sizes.length ? inStockSizes(p).length === 0 : Number(p.stock) <= 0;
+}
+function priceRange(p){
+  const sizes = sizesOf(p);
+  if(!sizes.length) return { min:Number(p.price), max:Number(p.price) };
+  const prices = sizes.map(s => Number(s.price));
+  return { min:Math.min(...prices), max:Math.max(...prices) };
+}
+/* customers read "+500" more easily than a second full price, so the extra
+   over the cheapest size is worked out here rather than typed by the owner */
+function sizeExtra(p, s){
+  return Number(s.price) - priceRange(p).min;
 }
 function galleryOf(p){
   // cover photo always shown first, then the extra product_images (never duplicated)
@@ -480,11 +520,22 @@ function reconcileBag(){
   BAG.forEach(i => {
     const p = PRODUCTS.find(x => x.id === i.product_id);
     i.name = p.name;
-    i.price = Number(p.price);
     i.image_url = p.image_path ? imgUrl(p.image_path) : "";
     i.in_stock = p.in_stock;
     i.quantity = Math.min(99, Math.max(1, Number(i.quantity) || 1));
     if(i.selected_color && !colorList(p).includes(i.selected_color)) i.selected_color = null;
+    // the size may have been renamed, repriced or removed since this bag was saved
+    const size = i.size_id ? sizeById(p, i.size_id) : null;
+    if(size){
+      i.size_label = size.label;
+      i.price = Number(size.price);
+    }else{
+      i.size_id = null;
+      i.size_label = null;
+      i.price = Number(p.price);
+    }
+    // a product that has since gained sizes can't be ordered without one
+    i.needs_size = sizesOf(p).length > 0 && !i.size_id;
   });
   // merging could now create duplicate lines (same product+colour) — collapse them
   const merged = [];
@@ -497,7 +548,7 @@ function reconcileBag(){
   if(JSON.stringify(BAG) !== before) saveBag();
   countBag();
 }
-const bagBlocked = () => BAG.some(i => i.in_stock === false);
+const bagBlocked = () => BAG.some(i => i.in_stock === false || i.needs_size);
 function saveBag(){ try{ localStorage.setItem(BAG_KEY, JSON.stringify(BAG)); }catch(e){} countBag(); }
 /* ---------- image shrink (receipts from phone cameras are 3–8MB) ---------- */
 function loadBitmap(file){
@@ -531,14 +582,15 @@ async function shrinkImage(file, maxPx=1600, quality=0.82){
    LOAD
    ============================================================ */
 async function loadAll(){
-  const [prods, zones, setts, images, cats, pages, pcats] = await Promise.all([
+  const [prods, zones, setts, images, cats, pages, pcats, sizes] = await Promise.all([
     sb.from("products").select("*").order("sort_order"),
     sb.from("shipping_zones").select("*").eq("is_active", true).order("sort_order"),
     sb.from("shop_settings").select("*"),
     sb.from("product_images").select("*").order("sort_order"),
     sb.from("categories").select("*").order("sort_order"),
     sb.from("shop_pages").select("*").eq("is_visible", true).order("sort_order"),
-    sb.from("product_categories").select("*")
+    sb.from("product_categories").select("*"),
+    sb.from("product_sizes").select("*").order("sort_order")
   ]);
   if(prods.error){
     document.getElementById("grid").innerHTML = '<div class="state">Could not load the shop right now. Please refresh.</div>';
@@ -556,6 +608,10 @@ async function loadAll(){
   PRODUCT_CATS = {};
   ((pcats && pcats.data) || []).forEach(row => {
     (PRODUCT_CATS[row.product_id] ||= []).push(row.category_id);
+  });
+  PRODUCT_SIZES = {};
+  ((sizes && sizes.data) || []).forEach(s => {
+    (PRODUCT_SIZES[s.product_id] ||= []).push(s);
   });
   SETTINGS = {};
   (setts.data || []).forEach(s => SETTINGS[s.key] = s.value);
@@ -810,8 +866,7 @@ function renderGrid(){
       ${archOf(p)}
       <span class="name">${esc(p.name)}</span>
       <span class="spec">${esc(p.description || "")}</span>
-      ${p.in_stock ? priceHtml(p.price)
-                   : `<span class="out">Currently unavailable</span>`}
+      ${cardPriceHtml(p)}
     </button>`).join("");
   document.getElementById("viewall").innerHTML = capped
     ? `<div class="viewall">
@@ -821,15 +876,47 @@ function renderGrid(){
     : "";
 }
 /* ---------- product ---------- */
-let current = null, qty = 1, selectedColor = null, galleryIdx = 0;
+let current = null, qty = 1, selectedColor = null, galleryIdx = 0, selectedSize = null;
 function openProduct(id){
   current = PRODUCTS.find(p=>p.id===id); if(!current) return;
   qty = 1; galleryIdx = 0;
   const colors = colorList(current);
   selectedColor = colors.length === 1 ? colors[0] : null;  // pre-pick when there's only one
+  const available = inStockSizes(current);
+  selectedSize = available.length === 1 ? available[0].id : null;
   drawProduct();
   document.getElementById("pov").classList.add("active");
   document.body.style.overflow = "hidden";
+}
+/* Size drives the price, so picking one has to update the figure on screen
+   immediately — that is the whole point of the feature. Only the parts that
+   change are redrawn, so the photo doesn't flash. */
+function pickSize(id){
+  const s = sizeById(current, id);
+  if(!s || Number(s.stock) <= 0) return;
+  selectedSize = id;
+  document.querySelectorAll(".size-chip").forEach(b => b.classList.toggle("on", b.dataset.s === id));
+  const price = document.getElementById("detail-price");
+  if(price) price.innerHTML = detailPriceHtml();
+  const note = document.getElementById("pick-note");
+  if(note) note.style.display = "none";
+  const add = document.getElementById("add-btn");
+  if(add) add.disabled = false;
+}
+/* the price shown on the detail sheet: chosen size, or the range until one is picked */
+function detailPriceHtml(){
+  const p = current;
+  const s = selectedSize ? sizeById(p, selectedSize) : null;
+  if(s) return salePct()
+    ? `<s class="was">${money(s.price)}</s>${money(saleUnit(s.price))}`
+    : money(s.price);
+  const { min, max } = priceRange(p);
+  if(min === max) return salePct()
+    ? `<s class="was">${money(min)}</s>${money(saleUnit(min))}`
+    : money(min);
+  return salePct()
+    ? `<s class="was">${money(min)}–${money(max)}</s>${money(saleUnit(min))}–${money(saleUnit(max))}`
+    : `${money(min)} – ${money(max)}`;
 }
 function pickColor(c){
   selectedColor = (selectedColor === c) ? null : c;  // tap again to deselect — colour stays optional
@@ -870,6 +957,24 @@ function drawProduct(){
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>
       ${esc(p.video_url)}
     </a>` : "";
+  const sizes = sizesOf(p);
+  const cheapest = priceRange(p).min;
+  const sizeBlock = sizes.length ? `
+    <div class="colors">
+      <div class="lbl">Size${selectedSize ? ": " + esc(sizeById(p, selectedSize).label) : " (required)"}</div>
+      <div class="chips">
+        ${sizes.map(s => {
+          const out = Number(s.stock) <= 0;
+          const extra = Number(s.price) - cheapest;
+          return `<button type="button" class="chip size-chip ${selectedSize===s.id?"on":""}"
+            data-s="${s.id}" ${out?"disabled":""} onclick="pickSize('${s.id}')">${esc(s.label)}${
+            out ? "" : (extra > 0 ? `<span class="plus">+${Number(extra).toLocaleString()}</span>` : "")
+          }</button>`;
+        }).join("")}
+      </div>
+    </div>` : "";
+  const needSize = sizes.length > 0 && !selectedSize;
+  const allOut = soldOut(p);
   document.getElementById("psheet").innerHTML = `
     <button class="x" onclick="closeProduct()">&times;</button>
     <div class="detail">
@@ -877,17 +982,18 @@ function drawProduct(){
       <div class="body">
         <h3>${esc(p.name)}</h3>
         <div class="spec">${esc(p.description || "")}</div>
-        <div class="price">${salePct()
-          ? `<s class="was">${money(p.price)}</s>${money(saleUnit(p.price))}`
-          : money(p.price)}</div>
+        <div class="price" id="detail-price">${detailPriceHtml()}</div>
         ${videoBlock}
+        ${sizeBlock}
         ${colorBlock}
-        ${p.in_stock ? `
+        ${(p.in_stock && !allOut) ? `
+          <div class="pick-note" id="pick-note" style="display:${needSize?"block":"none"}">Please choose a size to continue.</div>
           <div class="qty">
             <button onclick="step(-1)">&minus;</button><span id="q">${qty}</span><button onclick="step(1)">+</button>
           </div>
-          <button class="btn" onclick="addCurrent()">Add to bag</button>
-        ` : `<div style="color:var(--soft-ink);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase">Currently unavailable</div>`}
+          <button class="btn" id="add-btn" onclick="addCurrent()" ${needSize?"disabled":""}>Add to bag</button>
+        ` : `<div style="color:var(--soft-ink);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase">${
+              p.in_stock ? "Sold out" : "Currently unavailable"}</div>`}
       </div>
     </div>`;
 }
@@ -934,19 +1040,27 @@ function galTouchEnd(e){
   galStep(dx < 0 ? 1 : -1);
 }
 function step(d){ qty = Math.min(99, Math.max(1, qty+d)); document.getElementById("q").textContent = qty; }
-function addCurrent(){ addToBag(current, qty, selectedColor); closeProduct(); openBag(); }
+function addCurrent(){
+  if(sizesOf(current).length && !selectedSize) return;
+  addToBag(current, qty, selectedColor, selectedSize);
+  closeProduct(); openBag();
+}
 /* ---------- bag ---------- */
-function addToBag(p,n,color){
-  // a different colour of the same product is a separate line
-  const key = p.id + "|" + (color || "");
-  const ex = BAG.find(i => (i.product_id + "|" + (i.selected_color||"")) === key);
+function addToBag(p,n,color,sizeId){
+  // a different colour OR size of the same product is a separate line
+  const size = sizeId ? sizeById(p, sizeId) : null;
+  const line = { product_id:p.id, name:p.name,
+                 price: Number(size ? size.price : p.price),
+                 image_url: p.image_path ? imgUrl(p.image_path) : "",
+                 in_stock:p.in_stock, selected_color: color || null,
+                 size_id: size ? size.id : null, size_label: size ? size.label : null,
+                 needs_size: false, quantity:n };
+  const ex = BAG.find(i => lineKey(i) === lineKey(line));
   if(ex) ex.quantity = Math.min(99, ex.quantity + n);
-  else BAG.push({ product_id:p.id, name:p.name, price:Number(p.price),
-                  image_url: p.image_path ? imgUrl(p.image_path) : "",
-                  in_stock:p.in_stock, selected_color: color || null, quantity:n });
+  else BAG.push(line);
   saveBag(); drawBag();
 }
-function lineKey(i){ return i.product_id + "|" + (i.selected_color||""); }
+function lineKey(i){ return i.product_id + "|" + (i.selected_color||"") + "|" + (i.size_id||""); }
 function bagStep(key,d){
   const it = BAG.find(i=>lineKey(i)===key); if(!it) return;
   it.quantity += d;
@@ -965,7 +1079,9 @@ function drawBag(){
       <div class="thumb">${i.image_url ? `<img src="${i.image_url}" alt="${esc(i.name)}">` : ""}</div>
       <div style="flex:1;min-width:0">
         <div class="nm">${esc(i.name)}</div>
-        ${i.selected_color ? `<div style="font-size:11.5px;color:var(--soft-ink);margin-top:1px">${esc(i.selected_color)}</div>` : ""}
+        ${(i.size_label || i.selected_color) ? `<div style="font-size:11.5px;color:var(--soft-ink);margin-top:1px">${
+          [i.size_label, i.selected_color].filter(Boolean).map(esc).join(" · ")}</div>` : ""}
+        ${i.needs_size ? `<div style="font-size:11.5px;color:var(--walnut);margin-top:3px">This piece now comes in sizes — please remove it and choose one.</div>` : ""}
         <div class="pr">${i.in_stock === false ? "Currently unavailable"
           : (salePct() ? `<s class="was">${money(i.price)}</s>${money(saleUnit(i.price))}` : money(i.price))}</div>
         <div class="row">
@@ -982,8 +1098,8 @@ function drawBag(){
     ${disc ? `<div class="srow save"><span>Sale &minus;${salePct()}%</span>
         <span>&minus; ${money(disc)}</span></div>` : ""}
     <div class="srow" style="font-size:12px">Delivery calculated at checkout</div>
-    ${bagBlocked() ? `<div class="note" style="margin-top:0;margin-bottom:14px">One of these isn't
-        available right now — please remove it to continue.</div>` : ""}
+    ${bagBlocked() ? `<div class="note" style="margin-top:0;margin-bottom:14px">One of these can't be
+        ordered as it is — please remove it to continue.</div>` : ""}
     <button class="btn wide" onclick="startCheckout()" ${bagBlocked() ? "disabled" : ""}>Checkout</button>`;
 }
 function openBag(){
@@ -1100,7 +1216,7 @@ async function submitOrder(){
       p_customer_address: address,
       p_city: city,
       p_zone_id: zone.id,
-      p_items: BAG.map(i => ({ product_id: i.product_id, quantity: i.quantity, selected_color: i.selected_color || null }))
+      p_items: BAG.map(i => ({ product_id: i.product_id, quantity: i.quantity, selected_color: i.selected_color || null, size_id: i.size_id || null }))
     });
     if(res.error) throw res.error;
     orderNumber = res.data;
@@ -1138,7 +1254,7 @@ async function submitOrder(){
   }catch(e){
     console.error(e);
     const raw = String(e.message || e.error || "");
-    const known = /no longer exists|unavailable|out of stock|delivery area|quantity/i.test(raw);
+    const known = /no longer exists|unavailable|out of stock|delivery area|quantity|choose a size|no longer available|does not have sizes/i.test(raw);
     const lead = known
       ? raw + " Please reopen your bag — it has been refreshed."
       : "Something went wrong placing your order. Please try again, or message us on Instagram.";
