@@ -78,6 +78,7 @@
     text-transform:none;font-weight:400;margin-top:2px}
   /* struck-through original price, shown next to the sale price */
   .was{color:var(--soft-ink);text-decoration:line-through;margin-right:6px;font-size:.92em}
+  .from{font-size:.8em;color:var(--soft-ink);letter-spacing:.1em;text-transform:uppercase;margin-right:6px}
   .srow.save{color:var(--forest)}
   /* ---------- hero ---------- */
   /* padding-top/bottom only — a bare `padding` here silently overrode .wrap's
@@ -460,16 +461,17 @@ function priceHtml(v, cls){
     ? `<span class="${c}"><s class="was">${money(v)}</s>${money(saleUnit(v))}</span>`
     : `<span class="${c}">${money(v)}</span>`;
 }
-/* a product with sizes spans a range, so the grid shows both ends */
+/* Lead with the cheapest size, not a range — a customer scanning the grid
+   should meet the lowest number first. "From" keeps it honest, since the
+   dearer sizes are one tap away. */
 function cardPriceHtml(p){
   if(!p.in_stock) return `<span class="out">Currently unavailable</span>`;
   if(soldOut(p)) return `<span class="out">Sold out</span>`;
   const { min, max } = priceRange(p);
   if(min === max) return priceHtml(min);
-  const pct = salePct();
-  return pct
-    ? `<span class="price"><s class="was">${money(min)}–${money(max)}</s>${money(saleUnit(min))}–${money(saleUnit(max))}</span>`
-    : `<span class="price">${money(min)} – ${money(max)}</span>`;
+  return salePct()
+    ? `<span class="price"><span class="from">From</span><s class="was">${money(min)}</s>${money(saleUnit(min))}</span>`
+    : `<span class="price"><span class="from">From</span>${money(min)}</span>`;
 }
 const countBag = () => document.getElementById("bag-n").textContent = "(" + BAG.reduce((s,i)=>s+i.quantity,0) + ")";
 function imgUrl(path){ if(!path) return ""; return sb.storage.from("product-images").getPublicUrl(path).data.publicUrl; }
@@ -903,7 +905,8 @@ function pickSize(id){
   const add = document.getElementById("add-btn");
   if(add) add.disabled = false;
 }
-/* the price shown on the detail sheet: chosen size, or the range until one is picked */
+/* the price shown on the detail sheet: the chosen size, or the cheapest one
+   until a size is picked */
 function detailPriceHtml(){
   const p = current;
   const s = selectedSize ? sizeById(p, selectedSize) : null;
@@ -911,12 +914,10 @@ function detailPriceHtml(){
     ? `<s class="was">${money(s.price)}</s>${money(saleUnit(s.price))}`
     : money(s.price);
   const { min, max } = priceRange(p);
-  if(min === max) return salePct()
-    ? `<s class="was">${money(min)}</s>${money(saleUnit(min))}`
-    : money(min);
+  const lead = min === max ? "" : `<span class="from">From</span>`;
   return salePct()
-    ? `<s class="was">${money(min)}–${money(max)}</s>${money(saleUnit(min))}–${money(saleUnit(max))}`
-    : `${money(min)} – ${money(max)}`;
+    ? `${lead}<s class="was">${money(min)}</s>${money(saleUnit(min))}`
+    : `${lead}${money(min)}`;
 }
 function pickColor(c){
   selectedColor = (selectedColor === c) ? null : c;  // tap again to deselect — colour stays optional
