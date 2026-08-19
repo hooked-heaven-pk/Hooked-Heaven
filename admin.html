@@ -174,6 +174,21 @@
   }
   .sortbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
   .sortbar .lbl{font-size:11.5px;color:var(--soft-ink);margin-right:2px}
+  /* ---------- size rows ---------- */
+  .szrow{display:grid;grid-template-columns:1fr 92px 74px 34px;gap:8px;align-items:end;margin-bottom:10px}
+  .szrow input{width:100%;border:none;border-bottom:1px solid var(--hair);background:none;
+    padding:8px 2px;font-size:14.5px;color:var(--ink);border-radius:0}
+  .szrow input:focus{outline:none;border-bottom-color:var(--forest)}
+  .szrow .del{border:1px solid var(--hair);background:var(--card);border-radius:8px;height:34px;
+    color:var(--bad);font-size:15px;line-height:1;cursor:pointer;padding:0}
+  .szhead{display:grid;grid-template-columns:1fr 92px 74px 34px;gap:8px;margin-bottom:6px;
+    font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--soft-ink)}
+  @media(max-width:520px){
+    .szrow{grid-template-columns:1fr 80px 62px 32px;gap:6px}
+    .szhead{grid-template-columns:1fr 80px 62px 32px;gap:6px;font-size:9px}
+    .szrow input{font-size:16px}
+  }
+  .lowstock{color:var(--bad);font-weight:500}
   @media(max-width:640px){
     .fld input,.fld textarea,.fld select,.login-box input{font-size:16px}
     .ov{padding:0;align-items:flex-start}
@@ -229,7 +244,7 @@
 const SUPABASE_URL = "https://tztpscrdaryzgqzkxtgj.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_ZaUk5SrrJkRrcWnvCXClnQ_ErsmhGC8";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-let PRODS=[], ORDERS=[], ZONES=[], SET={}, view="products", LOAD_ERR=[], PIMAGES={}, CATS=[], PAGES=[], PCATS={};
+let PRODS=[], ORDERS=[], ZONES=[], SET={}, view="products", LOAD_ERR=[], PIMAGES={}, CATS=[], PAGES=[], PCATS={}, PSIZES={};
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function imgUrl(p){ if(!p) return ""; return sb.storage.from("product-images").getPublicUrl(p).data.publicUrl; }
 function money(n){ return (SET.currency||"PKR") + " " + Number(n).toLocaleString(); }
@@ -321,7 +336,24 @@ function showLogin(){ document.getElementById("login").style.display="flex"; doc
 function showApp(){ document.getElementById("login").style.display="none"; document.getElementById("app").classList.add("active"); loadAll(); }
 sb.auth.onAuthStateChange(e=>{ if(e==="SIGNED_OUT") showLogin(); });
 /* ---------- data ---------- */
-async function loadAll(){ LOAD_ERR=[]; await Promise.all([ldProds(),ldOrders(),ldZones(),ldSet(),ldImages(),ldCats(),ldPages(),ldPCats()]); go(view); }
+async function loadAll(){ LOAD_ERR=[]; await Promise.all([ldProds(),ldOrders(),ldZones(),ldSet(),ldImages(),ldCats(),ldPages(),ldPCats(),ldSizes()]); go(view); }
+/* product -> [sizes], each with its own price and stock */
+async function ldSizes(){ const r=await sb.from("product_sizes").select("*").order("sort_order");
+  if(r.error){ console.error(r.error); LOAD_ERR.push("sizes"); return; }
+  PSIZES={}; (r.data||[]).forEach(s=>{ (PSIZES[s.product_id] ||= []).push(s); }); }
+function sizesOf(productId){ return PSIZES[productId] || []; }
+/* what the shop page will say about this product right now */
+function stockSummary(p){
+  const sizes = sizesOf(p.id);
+  if(!sizes.length){
+    const n = Number(p.stock);
+    return n <= 0 ? { text:"Sold out", low:true } : { text:`${n} in stock`, low:n <= 2 };
+  }
+  const total = sizes.reduce((s,x)=>s+Number(x.stock),0);
+  const available = sizes.filter(x=>Number(x.stock) > 0).length;
+  if(!available) return { text:`${sizes.length} sizes · sold out`, low:true };
+  return { text:`${sizes.length} sizes · ${total} in stock`, low:total <= 2 };
+}
 /* product -> [category ids]. A product can now sit in several categories. */
 async function ldPCats(){ const r=await sb.from("product_categories").select("*");
   if(r.error){ console.error(r.error); LOAD_ERR.push("product categories"); return; }
@@ -372,6 +404,8 @@ document.getElementById("ov").addEventListener("click",e=>{ if(e.target.id==="ov
 function vProducts(){
   const rows = PRODS.map((p,i)=>{
     const n = (PIMAGES[p.id]||[]).length;
+    const szN = sizesOf(p.id).length;
+    const st = stockSummary(p);
     return `<tr>
       <td class="c-ord"><div class="ord">
         <button onclick="moveProd('${p.id}',-1)" ${i===0?"disabled":""} title="Move up">&#9650;</button>
@@ -382,10 +416,12 @@ function vProducts(){
         const names=catNames(p.id).map(esc);
         const bits=[names.length?names.join(", "):null, p.subtype?esc(p.subtype):null].filter(Boolean);
         return bits.length?`<br><span style="color:var(--soft-ink);font-size:12px">${bits.join(" \u00b7 ")}</span>`:""; })()}</td>
-      <td>${money(p.price)}</td>
+      <td>${szN ? priceSpread(p.id) : money(p.price)}</td>
+      <td><span class="${st.low?"lowstock":""}">${esc(st.text)}</span></td>
       <td><span class="pill ${p.in_stock?"p-yes":"p-no"}">${p.in_stock?"Available":"Unavailable"}</span></td>
       <td class="c-act">
         <button class="btn ghost sm" onclick="edProd('${p.id}')">Edit</button>
+        <button class="btn ghost sm" onclick="edSizes('${p.id}')">Sizes${szN?` (${szN})`:""}</button>
         <button class="btn ghost sm" onclick="edPhotos('${p.id}')">Photos${n?` (${n})`:""}</button>
         <button class="btn danger sm" onclick="delProd('${p.id}')">Delete</button>
       </td></tr>`;}).join("");
@@ -403,7 +439,14 @@ function vProducts(){
         Or use the arrows on each row to move a single product. This is the order customers see.
       </div>
     </div>`:""}
-    <div class="card">${PRODS.length?`<table><thead><tr><th></th><th></th><th>Name</th><th>Price</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="state">No products yet.</div>'}</div>`;
+    <div class="card">${PRODS.length?`<table><thead><tr><th></th><th></th><th>Name</th><th>Price</th><th>Stock</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="state">No products yet.</div>'}</div>`;
+}
+/* products with sizes show the cheapest–dearest span instead of one figure */
+function priceSpread(productId){
+  const prices = sizesOf(productId).map(s=>Number(s.price));
+  if(!prices.length) return "—";
+  const lo = Math.min(...prices), hi = Math.max(...prices);
+  return lo === hi ? money(lo) : money(lo) + " – " + money(hi);
 }
 /* Write only what changed: add the newly ticked categories, remove the unticked
    ones. Untouched rows are left alone so we never churn the whole table. */
@@ -497,6 +540,10 @@ function edProd(id){
           :`You can add up to 4 photos for the product page once this is saved.`}</div>
     <div class="fld"><label>Name</label><input id="f-name" value="${p?esc(p.name):""}" placeholder="e.g. Sunflower Bag Charm"></div>
     <div class="fld"><label>Price (${esc(SET.currency||"PKR")})</label><input id="f-price" type="number" min="0" step="1" value="${p?p.price:""}"></div>
+    <div class="fld"><label>Stock (pieces you have)</label><input id="f-stockn" type="number" step="1" value="${p?(p.stock??0):0}"></div>
+    <div class="hint">${p && sizesOf(p.id).length
+      ? `This product has sizes, so each size keeps its own price and stock — use the <strong>Sizes</strong> button. These two boxes are ignored while sizes exist.`
+      : `Customers can't order once this reaches 0. Update it whenever you make or sell a piece.`}</div>
     <div class="fld"><label>Short description</label><textarea id="f-desc" rows="3" placeholder="e.g. Pair of sunflowers · cotton yarn">${p?esc(p.description||""):""}</textarea></div>
     <div class="hint">The first two lines show on the shop page — the full text appears when a customer taps the product.</div>
     <div class="fld"><label>Categories</label>
@@ -527,6 +574,7 @@ function edProd(id){
 async function svProd(id){
   const name=document.getElementById("f-name").value.trim();
   const price=parseFloat(document.getElementById("f-price").value);
+  const stockN=parseInt(document.getElementById("f-stockn").value,10);
   const desc=document.getElementById("f-desc").value.trim();
   const stock=document.getElementById("f-stock").checked;
   const file=document.getElementById("f-img").files[0];
@@ -543,6 +591,7 @@ async function svProd(id){
     const wantCats = [...document.querySelectorAll(".f-cat")].filter(b=>b.checked).map(b=>b.value);
     const subRaw = document.getElementById("f-subtype").value.trim();
     const payload={name, price, description:desc||null, in_stock:stock,
+                   stock: isNaN(stockN) ? 0 : stockN,
                    colors: colorsRaw || null, video_url: videoRaw || null,
                    subtype: normaliseSubtype(subRaw)};
     if(file){
@@ -569,6 +618,110 @@ async function svProd(id){
     console.error("[svProd]",stage,e);
     showErr(err,"Could not save while "+stage+". Please try again.", errText(e));
     btn.disabled=false; btn.textContent="Save";
+  }
+}
+/* ============================================================
+   SIZES  (each with its own price and stock)
+   ------------------------------------------------------------
+   Edited as one list with a single Save, rather than a sheet per
+   size — the owner updates several counts in one sitting after a
+   making session, and one button is far less tapping on a phone.
+   ============================================================ */
+let SZ_DRAFT = [], SZ_PRODUCT = null;
+function edSizes(productId){
+  const p = PRODS.find(x=>x.id===productId); if(!p) return;
+  SZ_PRODUCT = productId;
+  SZ_DRAFT = sizesOf(productId).map(s => ({ id:s.id, label:s.label, price:s.price, stock:s.stock }));
+  if(!SZ_DRAFT.length) SZ_DRAFT = [{ id:null, label:"", price:p.price, stock:0 }];
+  drawSizes();
+}
+function drawSizes(){
+  const p = PRODS.find(x=>x.id===SZ_PRODUCT);
+  const rows = SZ_DRAFT.map((s,i)=>`
+    <div class="szrow">
+      <input value="${esc(s.label)}" placeholder="0-3 months"
+        oninput="szEdit(${i},'label',this.value)">
+      <input type="number" min="0" step="1" value="${s.price===""?"":Number(s.price)}"
+        oninput="szEdit(${i},'price',this.value)">
+      <input type="number" step="1" value="${s.stock===""?"":Number(s.stock)}"
+        oninput="szEdit(${i},'stock',this.value)">
+      <button class="del" onclick="szRemove(${i})" title="Remove">&times;</button>
+    </div>`).join("");
+  document.getElementById("sheet").innerHTML = `
+    <h2>Sizes — ${esc(p.name)}</h2>
+    <div class="hint" style="margin:0 0 14px">Write the full price you want to charge for each size —
+      not the difference. Customers see the size they pick and its price straight away.
+      Leave this list empty and the product goes back to one price for everyone.</div>
+    <div class="szhead"><span>Size</span><span>Price</span><span>Stock</span><span></span></div>
+    ${rows}
+    <button class="btn ghost sm" style="margin:4px 0 16px" onclick="szAdd()">+ Add size</button>
+    <div class="hint">A size shows as sold out once its stock reaches 0. Update the numbers whenever
+      you make or sell a piece.</div>
+    <div class="err" id="sz-err" style="display:none"></div>
+    <div class="acts">
+      <button class="btn ghost" onclick="closeSheet()">Cancel</button>
+      <button class="btn forest" id="sz-save" onclick="svSizes()">Save sizes</button>
+    </div>`;
+  openSheet();
+}
+/* the draft is kept in memory and written in one go, so a half-typed row never
+   reaches the database and the customer never sees a size called "0-" */
+function szEdit(i, field, value){ SZ_DRAFT[i][field] = value; }
+function szAdd(){
+  const p = PRODS.find(x=>x.id===SZ_PRODUCT);
+  SZ_DRAFT.push({ id:null, label:"", price:p.price, stock:0 });
+  drawSizes();
+}
+function szRemove(i){
+  SZ_DRAFT.splice(i,1);
+  drawSizes();
+}
+async function svSizes(){
+  const err = document.getElementById("sz-err"), btn = document.getElementById("sz-save");
+  err.style.display = "none";
+  const rows = SZ_DRAFT
+    .map(s => ({ id:s.id, label:String(s.label||"").trim(),
+                 price:Number(s.price), stock:parseInt(s.stock,10) }))
+    .filter(s => s.label || s.id);   // a blank never-saved row is just dropped
+  for(const s of rows){
+    if(!s.label){ showErr(err,"Every size needs a name, or remove the empty row."); return; }
+    if(isNaN(s.price) || s.price < 0){ showErr(err,`Enter a price for "${s.label}".`); return; }
+    if(isNaN(s.stock)){ showErr(err,`Enter a stock number for "${s.label}".`); return; }
+  }
+  const seen = new Set();
+  for(const s of rows){
+    const k = s.label.toLowerCase();
+    if(seen.has(k)){ showErr(err,`"${s.label}" is listed twice.`); return; }
+    seen.add(k);
+  }
+  btn.disabled = true; btn.textContent = "Saving…";
+  try{
+    const existing = sizesOf(SZ_PRODUCT);
+    const keptIds = rows.filter(s=>s.id).map(s=>s.id);
+    // removed first: a size the owner deleted shouldn't block a rename that reuses its name
+    for(const old of existing){
+      if(!keptIds.includes(old.id)){
+        const r = await sb.from("product_sizes").delete().eq("id", old.id);
+        if(r.error) throw r.error;
+      }
+    }
+    for(let i=0;i<rows.length;i++){
+      const s = rows[i];
+      const payload = { label:s.label, price:s.price, stock:s.stock, sort_order:i+1 };
+      const r = s.id
+        ? await sb.from("product_sizes").update(payload).eq("id", s.id)
+        : await sb.from("product_sizes").insert({ ...payload, product_id:SZ_PRODUCT });
+      if(r.error) throw r.error;
+    }
+    closeSheet();
+    await ldSizes();
+    vProducts();
+  }catch(e){
+    console.error("[svSizes]",e);
+    const msg = /duplicate/i.test(errText(e))
+      ? "Two sizes have the same name." : "Could not save the sizes.";
+    showErr(err,msg,errText(e));
+    btn.disabled = false; btn.textContent = "Save sizes";
   }
 }
 /* ============================================================
@@ -635,7 +788,7 @@ async function delProd(id){
   if(!confirm("Delete this product? This can't be undone.")) return;
   const r=await sb.from("products").delete().eq("id",id);
   if(r.error){ alert("Could not delete. "+errText(r.error)); return; }
-  await ldProds(); vProducts();
+  await Promise.all([ldProds(), ldSizes()]); vProducts();
 }
 /* ============================================================
    CATEGORIES
@@ -979,7 +1132,7 @@ async function viewOrder(id){
     }
   }
   const items = (o.order_items||[]).map(i=>
-    `<tr><td>${esc(i.product_name)} × ${i.quantity}</td><td style="text-align:right">${money(i.line_total)}</td></tr>`).join("");
+    `<tr><td>${esc(i.product_name)}${i.size_label?` <span style="color:var(--soft-ink)">(${esc(i.size_label)})</span>`:""} × ${i.quantity}</td><td style="text-align:right">${money(i.line_total)}</td></tr>`).join("");
   document.getElementById("sheet").innerHTML = `
     <h2>${esc(o.order_number)}</h2>
     <div class="odet">
@@ -1006,7 +1159,8 @@ async function svStatus(id){
   const status=document.getElementById("o-status").value;
   const r=await sb.from("orders").update({status}).eq("id",id);
   if(r.error){ showErr(document.getElementById("o-err"),"Could not update.",errText(r.error)); return; }
-  closeSheet(); await ldOrders(); vOrders();
+  // cancelling puts the pieces back on the shelf, so the counts on screen are now stale
+  closeSheet(); await Promise.all([ldOrders(), ldProds(), ldSizes()]); vOrders();
 }
 /* ============================================================
    SHIPPING ZONES
