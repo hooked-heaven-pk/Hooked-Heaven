@@ -1135,8 +1135,12 @@ async function viewOrder(id){
       rcpt = '<p style="color:var(--bad);font-size:13px">Receipt could not be loaded.</p>';
     }
   }
-  const items = (o.order_items||[]).map(i=>
-    `<tr><td>${esc(i.product_name)}${i.size_label?` <span style="color:var(--soft-ink)">(${esc(i.size_label)})</span>`:""} × ${i.quantity}</td><td style="text-align:right">${money(i.line_total)}</td></tr>`).join("");
+  const items = (o.order_items||[]).map(i=>{
+    // size and colour are what the customer actually picked — the owner needs both
+    // to make the right piece, so neither may be dropped from this line
+    const opts = [i.size_label, i.selected_color].filter(Boolean).map(esc).join(" \u00b7 ");
+    return `<tr><td>${esc(i.product_name)}${opts?` <span style="color:var(--soft-ink)">(${opts})</span>`:""} × ${i.quantity}</td><td style="text-align:right">${money(i.line_total)}</td></tr>`;
+  }).join("");
   document.getElementById("sheet").innerHTML = `
     <h2>${esc(o.order_number)}</h2>
     <div class="odet">
